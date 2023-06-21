@@ -1,0 +1,124 @@
+import glob
+import os
+
+configfile: "config/config.yml"
+
+organisms = set()
+for fastq in glob.glob('reads/*/*.f*q*'):
+    organisms.add(os.path.split(fastq)[1])
+organisms = list(organisms)
+
+print(organisms)
+
+bwa_index_extensions = [".amb", ".ann", ".bwt", ".pac", ".sa"]
+
+rule bwa_index:
+    input: "resources/{organism}/reference/{organism}.fna"
+    output:
+        multiext(
+            "resources/{organism}/reference/{organism}.fna",
+            *bwa_index_extensions
+        )
+    conda: "envs/bwa_samtools.yml"
+    log: "logs/{organism}/bwa_index.log"
+    shell: "bwa index {input} >{log} 2>&1"
+
+
+rule bwa_mem:
+    input:
+        ref="resources/{organism}/reference/{organism}.fna",
+        idx=multiext(
+            "resources/{organism}/reference/{organism}.fna",
+            *bwa_index_extensions
+        ),
+        fastq="results/{organism}/{sample}/filtered_reads/{sample}.fastq.gz",
+    output: "results/{organism}/{sample}/aligned/{sample}.bam"
+    conda: "envs/bwa_samtools.yml"
+    log: "logs/{organism}/{sample}/bwa_mem_{sample}.log"
+    threads: config["bwa_mem_threads"]
+    shell: """
+    (
+        bwa mem -t {threads} {input.ref} {input.fastq} | samtools sort > {output}
+    ) >{log} 2>&1
+    """
+
+rule samtools_index:
+    input: "resources/{organism}/reference/{organism}.fna"
+    output: "resources/{organism}/reference/{organism}.fna.fai"
+    log: "logs/{organism}/samtools_index.log"
+    conda: "envs/bwa_samtools.yml"
+    shell: "samtools faidx {input} >{output} 2>{log}"
+
+rule filter_reads:
+    input: "reads/{organism}/{sample}.fastq.gz"
+    output: "results/{organism}/{sample}/filtered_reads/{sample}.fastq.gz"
+    log: "logs/{organism}/{sample}/filter_reads_{sample}.log"
+    conda: "envs/nanoq.yml"
+    shell: """
+        nanoq \
+            -m {config[maximum_read_length]} \
+            -q {config[minimum_average_read_quality]} \
+            -i {input} \
+            -o {output} \
+            >{log} 2>&1
+    """
+
+rule fastqc:
+    input: "reads/{organism}/{sample}.fastq.gz"
+    output:
+        html="results/{organism}/{sample}/fastqc/{sample}_fastqc.html",
+        data="results/{organism}/{sample}/fastqc/{sample}_fastqc.zip",
+    log: "logs/{organism}/{sample}/fastqc_{sample}.log"
+    conda: "envs/fastqc.yml"
+    shell: "fastqc -o $(dirname {output.html}) {input} >{log} 2>&1"
+
+use rule fastqc as fastqc_filtered_reads with:
+    input: "results/{organism}/{sample}/filtered_reads/{sample}.fastq.gz"
+    output:
+        html="results/{organism}/{sample}/fastqc_filtered_reads/{sample}_fastqc.html",
+        data="results/{organism}/{sample}/fastqc_filtered_reads/{sample}_fastqc.zip"
+    log: "logs/{organism}/{sample}/fastqc_filtered_reads_{sample}.log"
+
+
+rule pileup:
+    input:
+        ref="resources/{organism}/reference/{organism}.fna",
+        idx="resources/{organism}/reference/{organism}.fna.fai",
+        bam="results/{organism}/{sample}/aligned/{sample}.bam",
+    output: "results/{organism}/{sample}/aligned/{sample}.pileup.gz"
+    log: "logs/{organism}/{sample}/pileup_{sample}.log"
+    conda: "envs/bwa_samtools.yml"
+    shell: "(samtools mpileup -f {input.ref} {input.bam} | gzip -c > {output}) >{log} 2>&1"
+
+rule consensus:
+    input:
+        pileup="results/{organism}/{sample}/aligned/{sample}.pileup.gz",
+        ref="resources/{organism}/reference/{organism}.fna",
+    output: 
+        consensus="results/{organism}/{sample}/aligned/{sample}.fna",
+        snps="results/{organism}/{sample}/snps/{sample}.tsv"
+    log: "logs/{organism}/{sample}/consensus_{sample}.log"
+    conda: "envs/biopython_pandas.yml"
+    script: "scripts/pileup_to_consensus.py"
+
+
+# rule fastqc:
+#     input: 
+#         r1="data/fastq/sample_accession/{library_source}/{sample}/{sample}_1.fastq.gz",
+#         r2="data/fastq/sample_accession/{library_source}/{sample}/{sample}_2.fastq.gz",
+#     output: 
+#         html="report/{library_source}/{sample}/{sample}_{read_index}_fastqc.html",
+#         data="report/{library_source}/{sample}/{sample}_{read_index}_fastqc.zip",
+#     conda: "../envs/fastqc.yml"
+#     resources:  
+#         mem="8G",
+#         runtime=480
+#     log: "logs/{library_source}/{sample}/{sample}_{read_index}.fastqc.log"
+#     shell: """
+#         (
+#             out_dir=$(dirname {output.html})
+#             mkdir -p $out_dir
+#             fastqc -o $(dirname {output.html}) {input}
+#         ) >{log} 2>&1
+#     """
+
