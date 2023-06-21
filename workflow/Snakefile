@@ -8,9 +8,12 @@ for fastq in glob.glob('reads/*/*.f*q*'):
     organisms.add(os.path.split(fastq)[1])
 organisms = list(organisms)
 
-print(organisms)
-
 bwa_index_extensions = [".amb", ".ann", ".bwt", ".pac", ".sa"]
+
+rule all:
+    input:
+        flat="results/pst/norfolk1/tree_input/norfolk1.ffn",
+        report="results/pst/norfolk1/fastqc_filtered_reads/norfolk1_fastqc.html"
 
 rule bwa_index:
     input: "resources/{organism}/reference/{organism}.fna"
@@ -101,24 +104,22 @@ rule consensus:
     conda: "envs/biopython_pandas.yml"
     script: "scripts/pileup_to_consensus.py"
 
+rule extract_cds:
+    input: 
+        consensus="results/{organism}/{sample}/aligned/{sample}.fna",
+        gff="resources/{organism}/reference/{organism}.gff",
+    output: "results/{organism}/{sample}/aligned/{sample}.ffn"
+    log: "logs/{organism}/{sample}/extract_cds_{sample}.log"
+    conda: "envs/gffread.yml"
+    shell: "gffread -x {output} -g {input.consensus} {input.gff} >{log} 2>&1"
 
-# rule fastqc:
-#     input: 
-#         r1="data/fastq/sample_accession/{library_source}/{sample}/{sample}_1.fastq.gz",
-#         r2="data/fastq/sample_accession/{library_source}/{sample}/{sample}_2.fastq.gz",
-#     output: 
-#         html="report/{library_source}/{sample}/{sample}_{read_index}_fastqc.html",
-#         data="report/{library_source}/{sample}/{sample}_{read_index}_fastqc.zip",
-#     conda: "../envs/fastqc.yml"
-#     resources:  
-#         mem="8G",
-#         runtime=480
-#     log: "logs/{library_source}/{sample}/{sample}_{read_index}.fastqc.log"
-#     shell: """
-#         (
-#             out_dir=$(dirname {output.html})
-#             mkdir -p $out_dir
-#             fastqc -o $(dirname {output.html}) {input}
-#         ) >{log} 2>&1
-#     """
-
+rule flatten:
+    input: "results/{organism}/{sample}/aligned/{sample}.ffn"
+    output: "results/{organism}/{sample}/tree_input/{sample}.ffn"
+    log: "logs/{organism}/{sample}/flatten_{sample}.log"
+    shell: 
+        """
+        echo \>{wildcards.sample} > {output}
+        grep -v \> {input} | tr -d '\n' >> {output}
+        echo >> {output}
+        """
