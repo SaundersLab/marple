@@ -189,7 +189,7 @@ rule tree:
 rule visualise_tree:
     input:
         tree="results/{organism}/trees/{organism}_{existing_samples}.newick",
-        metadata="resources/{organism}/{organism}_metadata.xlsx"
+        metadata="resources/{organism}/{organism}_sample_metadata.xlsx"
     output: "results/{organism}/trees/{organism}_{existing_samples}.pdf"
     log: "logs/{organism}/trees/visualise_tree_{existing_samples}.log"
     conda: "envs/visualise_tree.yml"
