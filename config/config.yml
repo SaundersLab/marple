@@ -1,0 +1,8 @@
+maximum_read_length: 4000
+minimum_average_read_quality: 3
+bwa_mem_threads: 2
+min_ref_depth: 2
+min_snp_depth: 10
+hetero_min: 0.2
+hetero_max: 0.8
+existing_samples: "subset"
