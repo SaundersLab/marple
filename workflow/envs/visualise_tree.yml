@@ -1,0 +1,10 @@
+name: visualise_tree
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - python=3.8.13
+  - biopython=1.79
+  - pandas=1.4.3
+  - openpyxl
+  - matplotlib=3.5.3
