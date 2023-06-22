@@ -3,16 +3,22 @@ import os
 
 configfile: "config/config.yml"
 
-organisms = set()
-for fastq in glob.glob('reads/*/*.f*q*'):
-    organisms.add(os.path.split(fastq)[1])
-organisms = list(organisms)
+samples = {}
+for fastq in glob.glob('reads/*/*.fastq.gz'):
+    organism = fastq.split('/')[1]
+    sample = os.path.basename(fastq)[:-len('.fastq.gz')]
+    samples[organism] = samples.get(organism, []) + [sample]
 
 bwa_index_extensions = [".amb", ".ann", ".bwt", ".pac", ".sa"]
 
+wildcard_constraints:
+    organism="(pst)|(pgt)",
+    existing_samples="(all)|(subset)"
+
 rule all:
     input:
-        flat="results/pst/norfolk1/tree_input/norfolk1.ffn",
+        tree="results/pst/trees/pst_subset.pdf",
+        # flat="results/pst/norfolk1/tree_input/norfolk1.ffn",
         report="results/pst/norfolk1/fastqc_filtered_reads/norfolk1_fastqc.html"
 
 rule bwa_index:
@@ -25,7 +31,6 @@ rule bwa_index:
     conda: "envs/bwa_samtools.yml"
     log: "logs/{organism}/bwa_index.log"
     shell: "bwa index {input} >{log} 2>&1"
-
 
 rule bwa_mem:
     input:
@@ -82,7 +87,6 @@ use rule fastqc as fastqc_filtered_reads with:
         data="results/{organism}/{sample}/fastqc_filtered_reads/{sample}_fastqc.zip"
     log: "logs/{organism}/{sample}/fastqc_filtered_reads_{sample}.log"
 
-
 rule pileup:
     input:
         ref="resources/{organism}/reference/{organism}.fna",
@@ -123,3 +127,40 @@ rule flatten:
         grep -v \> {input} | tr -d '\n' >> {output}
         echo >> {output}
         """
+
+def create_merge_input(wildcards):
+    organism = wildcards.organism
+    return [
+        f"results/{organism}/{sample}/tree_input/{sample}.ffn"
+        for sample in samples[organism]
+    ]
+
+rule merge:
+    input:
+        existing_samples="resources/{organism}/{organism}_{existing_samples}.ffn.gz",
+        new_samples=create_merge_input
+    output: "results/{organism}/trees/{organism}_{existing_samples}.ffn",
+    log: "logs/{organism}/trees/merge_{existing_samples}.log",
+    shell:
+        """
+        (cat {input.new_samples} > {output}
+        gzcat {input.existing_samples} >> {output}) >{log}
+        """
+
+rule tree:
+    input: "results/{organism}/trees/{organism}_{existing_samples}.ffn"
+    output: "results/{organism}/trees/{organism}_{existing_samples}.newick"
+    log: "logs/{organism}/trees/tree_{existing_samples}.log"
+    conda: "envs/raxml-ng.yml"
+    threads: 2
+    shell: "workflow/scripts/raxml-ng.sh {input} {output} {threads} >{log} 2>&1"
+
+rule visualise_tree:
+    input:
+        tree="results/{organism}/trees/{organism}_{existing_samples}.newick",
+        metadata="resources/{organism}/{organism}_metadata.xlsx"
+    output: "results/{organism}/trees/{organism}_{existing_samples}.pdf"
+    log: "logs/{organism}/trees/visualise_tree_{existing_samples}.log"
+    conda: "envs/visualise_tree.yml"
+    script: "scripts/visualise_tree.py"
+
