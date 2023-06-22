@@ -19,7 +19,9 @@ rule all:
     input:
         tree="results/pst/trees/pst_subset.pdf",
         # flat="results/pst/norfolk1/tree_input/norfolk1.ffn",
-        report="results/pst/norfolk1/fastqc_filtered_reads/norfolk1_fastqc.html"
+        report="results/pst/norfolk1/fastqc_filtered_reads/norfolk1_fastqc.html",
+        # flagstat="results/pst/norfolk1/flagstat/norfolk1.txt",
+        mqc="results/pst/report/pst.multiqc.html",
 
 rule bwa_index:
     input: "resources/{organism}/reference/{organism}.fna"
@@ -49,6 +51,9 @@ rule bwa_mem:
         bwa mem -t {threads} {input.ref} {input.fastq} | samtools sort > {output}
     ) >{log} 2>&1
     """
+
+
+
 
 rule samtools_index:
     input: "resources/{organism}/reference/{organism}.fna"
@@ -86,6 +91,32 @@ use rule fastqc as fastqc_filtered_reads with:
         html="results/{organism}/{sample}/fastqc_filtered_reads/{sample}_fastqc.html",
         data="results/{organism}/{sample}/fastqc_filtered_reads/{sample}_fastqc.zip"
     log: "logs/{organism}/{sample}/fastqc_filtered_reads_{sample}.log"
+
+rule flagstat:
+    input: "results/{organism}/{sample}/aligned/{sample}.bam"
+    output: "results/{organism}/{sample}/flagstat/{sample}.txt"
+    log: "logs/{organism}/{sample}/flagstat_{sample}.log"
+    conda: "envs/bwa_samtools.yml"
+    shell: "samtools flagstat {input} >{output} 2>{log}"
+
+def multiqc_input(wildcards):
+    organism = wildcards.organism
+    files = [
+        f"results/{organism}/{sample}/fastqc_filtered_reads/{sample}_fastqc.zip"
+        for sample in samples[organism]
+    ]
+    files += [
+        f"results/{organism}/{sample}/flagstat/{sample}.txt"
+        for sample in samples[organism]
+    ]
+    return files
+
+rule multiqc:
+    input: multiqc_input
+    output: "results/{organism}/report/{organism}.multiqc.html",
+    log: "logs/{organism}/multiqc_{organism}.log",
+    conda: "envs/multiqc.yml"
+    shell: "multiqc -f {input} -n {output} >{log} 2>&1"
 
 rule pileup:
     input:
@@ -128,7 +159,7 @@ rule flatten:
         echo >> {output}
         """
 
-def create_merge_input(wildcards):
+def tree_input_files_to_merge(wildcards):
     organism = wildcards.organism
     return [
         f"results/{organism}/{sample}/tree_input/{sample}.ffn"
@@ -138,7 +169,7 @@ def create_merge_input(wildcards):
 rule merge:
     input:
         existing_samples="resources/{organism}/{organism}_{existing_samples}.ffn.gz",
-        new_samples=create_merge_input
+        new_samples=tree_input_files_to_merge
     output: "results/{organism}/trees/{organism}_{existing_samples}.ffn",
     log: "logs/{organism}/trees/merge_{existing_samples}.log",
     shell:
@@ -163,4 +194,6 @@ rule visualise_tree:
     log: "logs/{organism}/trees/visualise_tree_{existing_samples}.log"
     conda: "envs/visualise_tree.yml"
     script: "scripts/visualise_tree.py"
+
+
 
