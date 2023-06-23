@@ -1,5 +1,8 @@
 .snakemake
 
+# index files
+resources/*/reference/*.fna.*
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
