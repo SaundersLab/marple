@@ -1,5 +1,8 @@
 .snakemake
 
+logs
+results
+
 # index files
 resources/*/reference/*.fna.*
 
