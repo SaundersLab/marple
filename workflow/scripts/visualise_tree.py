@@ -42,7 +42,7 @@ def visualise_tree(newick_path: str, metadata_path: str, out_path: str):
 
     with PdfPages(out_path) as pdf:
 
-        for style_col in list(style) + ['region']:
+        for style_col in list(style):
 
             height = max(5, n_leaves / 6)
             width = 14

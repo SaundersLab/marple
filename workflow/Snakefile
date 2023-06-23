@@ -17,11 +17,13 @@ wildcard_constraints:
 
 rule all:
     input:
-        tree="results/pst/trees/pst_subset.pdf",
+        t="results/pgt/trees/pgt_subset.pdf"
+        # cons="results/pgt/fiction1/aligned/fiction1.ffn"
+        # tree="results/pst/trees/pst_subset.pdf",
         # flat="results/pst/norfolk1/tree_input/norfolk1.ffn",
-        report="results/pst/norfolk1/fastqc_filtered_reads/norfolk1_fastqc.html",
+        # report="results/pst/norfolk1/fastqc_filtered_reads/norfolk1_fastqc.html",
         # flagstat="results/pst/norfolk1/flagstat/norfolk1.txt",
-        mqc="results/pst/report/pst.multiqc.html",
+        # mqc="results/pst/report/pst.multiqc.html",
 
 rule bwa_index:
     input: "resources/{organism}/reference/{organism}.fna"
@@ -51,9 +53,6 @@ rule bwa_mem:
         bwa mem -t {threads} {input.ref} {input.fastq} | samtools sort > {output}
     ) >{log} 2>&1
     """
-
-
-
 
 rule samtools_index:
     input: "resources/{organism}/reference/{organism}.fna"
