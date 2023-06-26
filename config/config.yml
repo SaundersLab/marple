@@ -6,3 +6,4 @@ min_snp_depth: 10
 hetero_min: 0.2
 hetero_max: 0.8
 existing_samples: "subset"
+primer_performance_thresholds: [2, 10, 20]

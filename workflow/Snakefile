@@ -15,15 +15,38 @@ wildcard_constraints:
     organism="(pst)|(pgt)",
     existing_samples="(all)|(subset)"
 
+def all_inputs(wildcards):
+    inputs = {}
+    for organism in samples:
+        inputs[f'{organism}_tree'] = f'results/{organism}/trees/{organism}_subset.pdf'
+        inputs[f'{organism}_report'] = f'results/{organism}/report/{organism}.multiqc.html'
+        inputs[f'{organism}_primer_performance'] = [
+            f'results/{organism}/{sample}/primer_performance/{sample}_primer_performance.csv'
+            for sample in samples[organism]
+        ]
+    return inputs
+
 rule all:
     input:
-        t="results/pgt/trees/pgt_subset.pdf"
+        unpack(all_inputs)
+        # t="results/pgt/trees/pgt_subset.pdf",
         # cons="results/pgt/fiction1/aligned/fiction1.ffn"
         # tree="results/pst/trees/pst_subset.pdf",
         # flat="results/pst/norfolk1/tree_input/norfolk1.ffn",
         # report="results/pst/norfolk1/fastqc_filtered_reads/norfolk1_fastqc.html",
         # flagstat="results/pst/norfolk1/flagstat/norfolk1.txt",
-        # mqc="results/pst/report/pst.multiqc.html",
+        # mqc="results/pgt/report/pgt.multiqc.html",
+
+rule primer_performance:
+    input:
+        pileup="results/{organism}/{sample}/aligned/{sample}.pileup.gz",
+        primers="resources/{organism}/{organism}_primer_metadata.csv",
+        consensus="results/{organism}/{sample}/aligned/{sample}.fna",
+    output:
+        primer_performance="results/{organism}/{sample}/primer_performance/{sample}_primer_performance.csv"
+    log: "logs/{organism}/{sample}/primer_performance_{sample}.log"
+    conda: "envs/visualise_tree.yml"
+    script: "scripts/primer_performance.py"
 
 rule bwa_index:
     input: "resources/{organism}/reference/{organism}.fna"
