@@ -20,31 +20,11 @@ def all_inputs(wildcards):
     for organism in samples:
         inputs[f'{organism}_tree'] = f'results/{organism}/trees/{organism}_subset.pdf'
         inputs[f'{organism}_report'] = f'results/{organism}/report/{organism}.multiqc.html'
-        # inputs[f'{organism}_primer_performance'] = [
-        #     f'results/{organism}/{sample}/primer_performance/{sample}_primer_performance.csv'
-        #     for sample in samples[organism]
-        # ]
-        # inputs[f'{organism}_primer_performance_by_pool'] = [
-        #     f'results/{organism}/{sample}/primer_performance/{sample}_primer_performance_by_{groupby}.csv'
-        #     for sample in samples[organism]
-        #     for groupby in config['primer_performance_groups']
-        # ]
-        # inputs[f'{organism}_primer_performance_by_pool'] = [
-        #     f'results/{organism}/{sample}/primer_performance/{sample}_amplicon_coverage.csv'
-        #     for sample in samples[organism]
-        # ]
     return inputs
 
 rule all:
     input:
         unpack(all_inputs)
-        # t="results/pgt/trees/pgt_subset.pdf",
-        # cons="results/pgt/fiction1/aligned/fiction1.ffn"
-        # tree="results/pst/trees/pst_subset.pdf",
-        # flat="results/pst/norfolk1/tree_input/norfolk1.ffn",
-        # report="results/pst/norfolk1/fastqc_filtered_reads/norfolk1_fastqc.html",
-        # flagstat="results/pst/norfolk1/flagstat/norfolk1.txt",
-        # mqc="results/pgt/report/pgt.multiqc.html",
 
 def primer_performance_summaries(wildcards):
     organism = wildcards.organism
