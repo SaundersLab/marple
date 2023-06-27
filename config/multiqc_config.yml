@@ -1,0 +1,104 @@
+show_analysis_paths: False
+show_analysis_time: False
+intro_text: False
+custom_data:
+  amplicon_coverage:
+    file_format: "csv"
+    section_name: "Amplicon Coverage"
+    plot_type: "linegraph"
+    pconfig:
+      id: "amplicon_coverage_lineplot"
+      title: "Amplicon Coverage"
+      ylab: "Amplicons"
+      xlab: "% Positions Covered"
+      ymin: 0
+      tt_label: "{point.y} amplicons have ≥ {point.x}% positions covered"
+  sequencing_summary:
+    file_format: "csv"
+    id: "sequencing_summary"
+    plot_type: "generalstats"
+    pconfig:
+      - "Tree Bases":
+          max: 100
+          min: 0
+          scale: "RdYlGn"
+          suffix: "%"
+          placement: 15
+          description: "Percentage of positions in the tree input for which bases were called"
+      - "All Amplicons":
+          max: 100
+          min: 0
+          scale: "RdYlGn"
+          suffix: "%"
+          placement: 16
+          description: "Percentage of positions in the amplicons for which bases were called"
+      - "Pool A":
+          max: 100
+          min: 0
+          scale: "RdYlGn"
+          suffix: "%"
+          placement: 17
+          hidden: true
+          description: "Percentage of positions in the amplicons of pool A primers fo which bases were called"
+      - "Pool B":
+          max: 100
+          min: 0
+          scale: "RdYlGn"
+          suffix: "%"
+          placement: 18
+          hidden: true
+          description: "Percentage of positions in the amplicons of pool B primers fo which bases were called"
+      - "Pool C":
+          max: 100
+          min: 0
+          scale: "RdYlGn"
+          suffix: "%"
+          placement: 19
+          hidden: true
+          description: "Percentage of positions in the amplicons of pool C primers fo which bases were called"
+      - "Pool D":
+          max: 100
+          min: 0
+          scale: "RdYlGn"
+          suffix: "%"
+          placement: 20
+          hidden: true
+          description: "Percentage of positions in the amplicons of pool D primers fo which bases were called"
+      - "Plate 1":
+          max: 100
+          min: 0
+          scale: "RdYlGn"
+          suffix: "%"
+          placement: 21
+          hidden: true
+          description: "Percentage of positions in the amplicons of plate 1 primers fo which bases were called"
+      - "Plate 2":
+          max: 100
+          min: 0
+          scale: "RdYlGn"
+          suffix: "%"
+          placement: 22
+          hidden: true
+          description: "Percentage of positions in the amplicons of plate 2 primers fo which bases were called"
+      - "Plate 3":
+          max: 100
+          min: 0
+          scale: "RdYlGn"
+          suffix: "%"
+          placement: 23
+          hidden: true
+          description: "Percentage of positions in the amplicons of plate 3 primers fo which bases were called"
+      - "Plate 4":
+          max: 100
+          min: 0
+          scale: "RdYlGn"
+          suffix: "%"
+          placement: 24
+          hidden: true
+          description: "Percentage of positions in the amplicons of plate 4 primers fo which bases were called"
+sp:
+  amplicon_coverage:
+    fn: "*_amplicon_coverage.csv"
+  sequencing_summary:
+    fn: "*_multiqc_row.csv"
+  

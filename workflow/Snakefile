@@ -20,10 +20,19 @@ def all_inputs(wildcards):
     for organism in samples:
         inputs[f'{organism}_tree'] = f'results/{organism}/trees/{organism}_subset.pdf'
         inputs[f'{organism}_report'] = f'results/{organism}/report/{organism}.multiqc.html'
-        inputs[f'{organism}_primer_performance'] = [
-            f'results/{organism}/{sample}/primer_performance/{sample}_primer_performance.csv'
-            for sample in samples[organism]
-        ]
+        # inputs[f'{organism}_primer_performance'] = [
+        #     f'results/{organism}/{sample}/primer_performance/{sample}_primer_performance.csv'
+        #     for sample in samples[organism]
+        # ]
+        # inputs[f'{organism}_primer_performance_by_pool'] = [
+        #     f'results/{organism}/{sample}/primer_performance/{sample}_primer_performance_by_{groupby}.csv'
+        #     for sample in samples[organism]
+        #     for groupby in config['primer_performance_groups']
+        # ]
+        # inputs[f'{organism}_primer_performance_by_pool'] = [
+        #     f'results/{organism}/{sample}/primer_performance/{sample}_amplicon_coverage.csv'
+        #     for sample in samples[organism]
+        # ]
     return inputs
 
 rule all:
@@ -36,6 +45,54 @@ rule all:
         # report="results/pst/norfolk1/fastqc_filtered_reads/norfolk1_fastqc.html",
         # flagstat="results/pst/norfolk1/flagstat/norfolk1.txt",
         # mqc="results/pgt/report/pgt.multiqc.html",
+
+def primer_performance_summaries(wildcards):
+    organism = wildcards.organism
+    sample = wildcards.sample
+    return [
+        f"results/{organism}/{sample}/primer_performance/{sample}_primer_performance_by_{groupby}.csv"
+        for groupby in config['primer_performance_groups']
+    ]
+
+rule create_sample_multiqc_row:
+    input:
+        tree_input="results/{organism}/{sample}/tree_input/{sample}.ffn",
+        primer_performance_summaries=primer_performance_summaries
+    output: 
+        multiqc_row="results/{organism}/{sample}/multiqc_row/{sample}_multiqc_row.csv"
+    log: "logs/{organism}/{sample}/create_sample_multiqc_row_{sample}.log"
+    conda: "envs/visualise_tree.yml"
+    script: "scripts/create_sample_multiqc_row.py"
+
+rule summarise_primer_performance:
+    input:
+        primer_performance="results/{organism}/{sample}/primer_performance/{sample}_primer_performance.csv"
+    output:
+        primer_performance_summary="results/{organism}/{sample}/primer_performance/{sample}_primer_performance_by_{groupby}.csv"
+    log: "logs/{organism}/{sample}/summarise_primer_performance_by_{groupby}_{sample}.log"
+    conda: "envs/visualise_tree.yml"
+    script: "scripts/summarise_primer_performance.py"
+
+rule cumulative_amplicon_coverage:
+    input:
+        primer_performance="results/{organism}/{sample}/primer_performance/{sample}_primer_performance.csv"
+    output:
+        cumulative_amplicon_coverage="results/{organism}/{sample}/primer_performance/{sample}_cumulative_amplicon_coverage.csv"
+    log: "logs/{organism}/{sample}/cumulative_amplicon_coverage_{sample}.log"
+    conda: "envs/visualise_tree.yml"
+    script: "scripts/cumulative_amplicon_coverage.py"
+
+# This is a work around to ensure that multiqc can create the plot specified in
+# config/multiqc_config.yaml.
+# Unless there is at least one _mqc.yaml in the directory, multiqc will not 
+# pick up any of the custom_data specified in the --config file. To ensure it
+# does pick up those files, we create a file for each sample with only id.
+rule placeholder_mqc:
+    output: 
+        placeholder_mqc="results/{organism}/{sample}/primer_performance/{sample}_empty_config_required_for_amplicon_coverage_mqc.yaml"
+    log: "logs/{organism}/{sample}/placeholder_mqc_{sample}.log"
+    script: "scripts/create_empty_config_required_for_amplicon_coverage_mqc.py"
+
 
 rule primer_performance:
     input:
@@ -131,6 +188,18 @@ def multiqc_input(wildcards):
         f"results/{organism}/{sample}/flagstat/{sample}.txt"
         for sample in samples[organism]
     ]
+    files += [
+        f"results/{organism}/{sample}/primer_performance/{sample}_cumulative_amplicon_coverage.csv"
+        for sample in samples[organism]
+    ]
+    files += [
+        f"results/{organism}/{sample}/primer_performance/{sample}_empty_config_required_for_amplicon_coverage_mqc.yaml"
+        for sample in samples[organism]
+    ]
+    files += [
+        f"results/{organism}/{sample}/multiqc_row/{sample}_multiqc_row.csv"
+        for sample in samples[organism]
+    ]
     return files
 
 rule multiqc:
@@ -138,7 +207,12 @@ rule multiqc:
     output: "results/{organism}/report/{organism}.multiqc.html",
     log: "logs/{organism}/multiqc_{organism}.log",
     conda: "envs/multiqc.yml"
-    shell: "multiqc -f {input} -n {output} >{log} 2>&1"
+    shell: """
+        tempdir=$(mktemp -d)
+        cp {input} $tempdir
+        multiqc -f $tempdir --config config/multiqc_config.yml -n {output} >{log} 2>&1
+        rm -r $tempdir
+    """
 
 rule pileup:
     input:

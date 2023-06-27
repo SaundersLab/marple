@@ -52,14 +52,14 @@ def primer_performance(
     for gene, gene_depths in depths.items():
         gene_seq = consensus[gene]
         gene_thresholds[gene] = {
-            f'gene_ge_{threshold}': sum(d >= threshold for d in gene_depths)
+            f'gene_n_ge_{threshold}': sum(d >= threshold for d in gene_depths)
             for threshold in thresholds
         }
         gene_n_used[gene] = [known_bases(gene_seq)]
         for _, amplicon in primers[primers.gene == gene].iterrows():
             amplicon_depths = gene_depths[amplicon.start:amplicon.end]
             amplicon_thresholds[amplicon.amplicon] = {
-                f'amplicon_ge_{threshold}': sum(
+                f'amplicon_n_ge_{threshold}': sum(
                     d >= threshold for d in amplicon_depths
                 )
                 for threshold in thresholds
@@ -98,10 +98,10 @@ def primer_performance(
 
     for unit in ['amplicon', 'gene']:
         for threshold in thresholds:
-            primers[f'pct_{unit}_ge_{threshold}'] = (
-                100 * primers[f'{unit}_ge_{threshold}'] / primers[f'{unit}_length']
+            primers[f'{unit}_pct_ge_{threshold}'] = (
+                100 * primers[f'{unit}_n_ge_{threshold}'] / primers[f'{unit}_length']
             ).round(4)
-            primers[f'pct_{unit}_used'] = (
+            primers[f'{unit}_pct_used'] = (
                 100 * primers[f'{unit}_n_used'] / primers[f'{unit}_length']
             ).round(4)
             
