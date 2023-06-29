@@ -251,7 +251,7 @@ rule merge:
     shell:
         """
         (cat {input.new_samples} > {output}
-        gzcat {input.existing_samples} >> {output}) >{log}
+        gunzip -c {input.existing_samples} >> {output}) >{log}
         """
 
 rule tree:
