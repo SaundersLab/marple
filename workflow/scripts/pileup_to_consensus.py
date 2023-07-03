@@ -91,6 +91,7 @@ def pileup_row_to_consensus(
     contig, pos_str, ref, depth_str, reads, *_ = row.split('\t')
     depth = int(depth_str)
     pos = int(pos_str)
+    ref = ref.upper()
     null_consensus = contig, pos - 1, 'N'
     if depth < min_ref_depth:
         return null_consensus
