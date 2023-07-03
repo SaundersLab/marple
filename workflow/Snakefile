@@ -73,6 +73,22 @@ rule placeholder_mqc:
     log: "logs/{organism}/{sample}/placeholder_mqc_{sample}.log"
     script: "scripts/create_empty_config_required_for_amplicon_coverage_mqc.py"
 
+def snp_tables_to_summaries(wildcards):
+    organism = wildcards.organism
+    return [
+        f"results/{organism}/{sample}/snps/{sample}.tsv"
+        for sample in samples[organism]
+    ]
+
+rule summarise_snps:
+    input:
+        ref="resources/{organism}/reference/{organism}.fna",
+        snps=snp_tables_to_summaries
+    output:
+        snp_counts="results/{organism}/report/snp_summary.csv"
+    log: "logs/{organism}/summarise_snps.log"
+    conda: "envs/visualise_tree.yml"
+    script: "scripts/summarise_snps_by_gene.py"
 
 rule primer_performance:
     input:
@@ -179,6 +195,9 @@ def multiqc_input(wildcards):
     files += [
         f"results/{organism}/{sample}/multiqc_row/{sample}_multiqc_row.csv"
         for sample in samples[organism]
+    ]
+    files += [
+        f"results/{organism}/report/snp_summary.csv"
     ]
     return files
 

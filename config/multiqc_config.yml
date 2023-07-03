@@ -13,6 +13,15 @@ custom_data:
       xlab: "% Positions Covered"
       ymin: 0
       tt_label: "{point.y} amplicons have ≥ {point.x}% positions covered"
+  snp_summary:
+    file_format: "csv"
+    section_name: "SNP Summary"
+    plot_type: "heatmap"
+    pconfig:
+      id: "snp_summary_heatmap"
+      title: "SNP Summary"
+      ylab: "gene"
+      xlab: "sample"
   sequencing_summary:
     file_format: "csv"
     id: "sequencing_summary"
@@ -99,6 +108,9 @@ custom_data:
 sp:
   amplicon_coverage:
     fn: "*_amplicon_coverage.csv"
+    fn_clean_exts: "_amplicon_coverage.csv"
+  snp_summary:
+    fn: "snp_summary.csv"
   sequencing_summary:
     fn: "*_multiqc_row.csv"
   
