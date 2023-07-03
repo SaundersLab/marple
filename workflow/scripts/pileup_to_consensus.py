@@ -26,9 +26,8 @@ def base_ratios_from_reads(ref: str,
     upper_reads = reads.upper()
     base_counts = {base: upper_reads.count(base) for base in 'ACTG'}
 
-    upper_ref = ref.upper()
-    if upper_ref in 'ACTG':
-        base_counts[upper_ref] += reads.count('.') + reads.count(',')
+    if ref in 'ACTG':
+        base_counts[ref] += reads.count('.') + reads.count(',')
 
     # Only calculate ratios for present bases
     return {base: n / depth for base, n in base_counts.items() if n}
