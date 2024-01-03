@@ -62,7 +62,6 @@ if docker images | grep marple > /dev/null; then
 else
 	git clone https://github.com/snakemake/snakemake.git
 	cd snakemake/
-	sed -i 's/apptainer/apptainer -c bioconda bwa star samtools nanoq fastqc gffread multiqc fasttree openpyxl matplotlib biopython/g' Dockerfile
 	if [[  "$OSTYPE" == "linux-gnu"* ]]; then
 		sed -i 's/apptainer/apptainer -c bioconda bwa star samtools nanoq fastqc gffread multiqc fasttree openpyxl matplotlib biopython/g' Dockerfile
 		sudo groupadd -f docker
