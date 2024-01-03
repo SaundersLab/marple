@@ -62,8 +62,9 @@ if docker images | grep marple > /dev/null; then
 else
 	git clone https://github.com/snakemake/snakemake.git
 	cd snakemake/
-	sed -i 's/apptainer/apptainer -c bioconda bwa star samtools nanoq fastqc gffread multiqc raxml-ng openpyxl matplotlib biopython/g' Dockerfile
+	sed -i 's/apptainer/apptainer -c bioconda bwa star samtools nanoq fastqc gffread multiqc fasttree openpyxl matplotlib biopython/g' Dockerfile
 	if [[  "$OSTYPE" == "linux-gnu"* ]]; then
+		sed -i 's/apptainer/apptainer -c bioconda bwa star samtools nanoq fastqc gffread multiqc fasttree openpyxl matplotlib biopython/g' Dockerfile
 		sudo groupadd -f docker
 		sudo usermod -aG docker $USER
     		sg docker -c '
@@ -71,10 +72,15 @@ else
         	cd ..
         	rm -rf snakemake
         	$run_cmd'
+	elif [[ "$OSTYPE" == "darwin"* ]]; then
+		sed -i -tmp 's/apptainer/apptainer -c bioconda bwa star samtools nanoq fastqc gffread multiqc fasttree openpyxl matplotlib biopython/g' Dockerfile
+		rm Dockerfile-tmp
+		docker build -t marple ./
+		cd ..
+		rm -rf snakemake
+		$run_cmd
+	else
+		echo "Unsupported operating system"
 	fi
-	docker build -t marple ./
-	cd ..
-	rm -rf snakemake
-	$run_cmd
 fi
 
