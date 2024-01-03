@@ -18,7 +18,7 @@ wildcard_constraints:
 def all_inputs(wildcards):
     inputs = {}
     for organism in samples:
-        inputs[f'{organism}_tree'] = f'results/{organism}/trees/{organism}_subset.pdf'
+        inputs[f'{organism}_tree'] = f'results/{organism}/trees/{organism}_all.pdf'
         inputs[f'{organism}_report'] = f'results/{organism}/report/{organism}.multiqc.html'
     return inputs
 
@@ -275,15 +275,13 @@ rule merge:
 
 rule tree:
     input: "results/{organism}/trees/{organism}_{existing_samples}.ffn"
-    output: "results/{organism}/trees/{organism}_{existing_samples}.newick"
+    output: "results/{organism}/trees/{organism}_{existing_samples}.nwk"
     log: "logs/{organism}/trees/tree_{existing_samples}.log"
-    conda: "envs/raxml-ng.yml"
-    threads: 2
-    shell: "workflow/scripts/raxml-ng.sh {input} {output} {threads} >{log} 2>&1"
+    shell: "workflow/scripts/fasttree.sh {input} {output} >{log} 2>&1"
 
 rule visualise_tree:
     input:
-        tree="results/{organism}/trees/{organism}_{existing_samples}.newick",
+        tree="results/{organism}/trees/{organism}_{existing_samples}.nwk",
         metadata="resources/{organism}/{organism}_sample_metadata.xlsx"
     output: "results/{organism}/trees/{organism}_{existing_samples}.pdf"
     log: "logs/{organism}/trees/visualise_tree_{existing_samples}.log"
