@@ -37,24 +37,6 @@ else
     exit 1
 fi
 
-if command -v git &> /dev/null; then
-    echo "Skipping git installation"
-elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
-    echo "Detected Linux"
-    sudo apt update
-    sudo apt install git 
-elif [[ "$OSTYPE" == "darwin"* ]]; then
-    echo "Detected macOS"
-    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-    brew install git
-else
-    echo "Unsupported operating system"
-    exit 1
-fi
-
-docker --version
-git --version
-
 # Create a docker img of snakemake if it doesn't exist
 
 if docker images | grep marple > /dev/null; then
