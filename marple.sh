@@ -1,6 +1,7 @@
 #!/bin/bash
 # last update: 12/01/2024
 
+source ~/.bashrc
 source activate marple-env
 
 run_cmd="snakemake --cores all"
