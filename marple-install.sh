@@ -1,6 +1,11 @@
 #!/bin/bash
 # last update: 12/01/2024
 
+if ! $(pwd) == '/home/$USER/marple'; then
+        echo "The marple directory should be in /home/$USER/marple. Move and try again."
+        exit 1
+fi
+
 pckg="snakemake bwa star samtools nanoq fastqc gffread multiqc fasttree openpyxl matplotlib biopython"
 
 if ! grep transfer-pgt ~/.bashrc &> /dev/null; then
