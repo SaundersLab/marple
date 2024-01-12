@@ -1,7 +1,9 @@
 #!/bin/bash
 # last update: 12/01/2024
 
-if ! $(pwd) == '/home/$USER/marple'; then
+wd=home/$USER/marple
+
+if [ $(pwd) != $wd ]; then
         echo "The marple directory should be in /home/$USER/marple. Move and try again."
         exit 1
 fi
