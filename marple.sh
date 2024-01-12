@@ -1,9 +1,6 @@
 #!/bin/bash
 # last update: 12/01/2024
 
-source ~/.bashrc
-source activate marple-env
-
 run_cmd="snakemake --cores all"
 
 while [[ "$#" -gt 0 ]]; do
@@ -22,12 +19,12 @@ done
 if command -v mamba &> /dev/null; then
     if mamba env list | grep -q marple-env; then
 		$run_cmd
+        exit 0
 	else
 		echo "Environment marple-env not found."
-        exit 0
+        exit 1
 	fi
 else
     echo "Mamba not found."
-    exit 0
+    exit 1
 fi
-
