@@ -9,7 +9,7 @@ if [ $cwd != $wd ]; then
         :
 fi
 
-pckg="pulp=2.7.0 snakemake bwa star samtools nanoq fastqc gffread multiqc fasttree openpyxl matplotlib biopython"
+pckg="snakemake bwa star samtools nanoq fastqc gffread multiqc fasttree openpyxl matplotlib biopython"
 
 if ! grep transfer-pgt ~/.bashrc &> /dev/null; then
         echo -e '\nfunction transfer-pgt () {\ncat /var/lib/minknow/data/reads/$1/*/*/basecalling/pass/$2/*.fastq.gz > /home/$USER/marple/reads/pgt/$3.fastq.gz\n}' >> ~/.bashrc
