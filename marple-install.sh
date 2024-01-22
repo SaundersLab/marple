@@ -1,5 +1,5 @@
 #!/bin/bash
-# last update: 12/01/2024
+# last update: 22/01/2024
 
 wd=/home/$USER/marple
 cwd=$(pwd)
@@ -9,14 +9,25 @@ if [ $cwd != $wd ]; then
         :
 fi
 
-pckg="snakemake bwa star samtools nanoq fastqc gffread multiqc fasttree openpyxl matplotlib biopython"
+# Create backup of .bashrc and add marple functions
+if [[ ! -d ".marple-tmp" ]]; then
+        mkdir .marple-tmp
+        cp ~/.bashrc .marple-tmp/bashrc.bak
 
-if ! grep transfer-pgt ~/.bashrc &> /dev/null; then
-        echo -e '\nfunction transfer-pgt () {\ncat /var/lib/minknow/data/reads/$1/*/*/basecalling/pass/$2/*.fastq.gz > /home/$USER/marple/reads/pgt/$3.fastq.gz\n}' >> ~/.bashrc
-        echo -e '\nfunction transfer-pst () {\ncat /var/lib/minknow/data/reads/$1/*/*/basecalling/pass/$2/*.fastq.gz > /home/$USER/marple/reads/pst/$3.fastq.gz\n}' >> ~/.bashrc
+        # These old transfer-p[g/s]t may be useful for future GUI implementation
+        # echo -e '\nfunction transfer-pgt () {\ncat /var/lib/minknow/data/reads/$1/*/*/basecalling/pass/$2/*.fastq.gz > /home/$USER/marple/reads/pgt/$3.fastq.gz\n}' >> ~/.bashrc
+        # echo -e '\nfunction transfer-pst () {\ncat /var/lib/minknow/data/reads/$1/*/*/basecalling/pass/$2/*.fastq.gz > /home/$USER/marple/reads/pst/$3.fastq.gz\n}' >> ~/.bashrc
+
+        echo -e '\nfunction transfer-pgt() {\nexperiment=$1\nshift\nfor arg in "$@";do\nIFS="=" read -r barcode sample<<<"$arg"\ncat /var/lib/minknow/data/reads/"$experiment"/*/*/basecalling/pass/"$barcode"/*.fastq.gz > /home/$USER/marple/reads/pgt/"$sample".fastq.gz\ndone\n}' >> ~/.bashrc
+        echo -e '\nfunction transfer-pst() {\nexperiment=$1\nshift\nfor arg in "$@";do\nIFS="=" read -r barcode sample<<<"$arg"\ncat /var/lib/minknow/data/reads/"$experiment"/*/*/basecalling/pass/"$barcode"/*.fastq.gz > /home/$USER/marple/reads/pst/"$sample".fastq.gz\ndone\n}' >> ~/.bashrc
         echo -e '\nfunction marple() {\npushd /home/$USER/marple \nmamba activate marple-env \nbash marple.sh $1 \nmamba deactivate \npopd\n}' >> ~/.bashrc
+        echo -e '\nexport -f transfer-pgt' >> ~/.bashrc
+        echo -e 'export -f transfer-pst' >> ~/.bashrc
+        echo -e 'export -f marple\n' >> ~/.bashrc
         source ~/.bashrc
 fi
+
+pckg="snakemake bwa star samtools nanoq fastqc gffread multiqc fasttree openpyxl matplotlib biopython"
 
 if command -v mamba &> /dev/null; then
 if mamba env list | grep -q marple-env; then
