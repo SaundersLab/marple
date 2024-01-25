@@ -25,8 +25,3 @@ marple
 > ```
 > marple --dev
 > ```
-
-> [!CAUTION]
-> This pipeline is a work in progress, until it gets a numbered version, you may also consider using
-> - https://github.com/SaundersLab/marple-pst for Pst
-> - https://github.com/SaundersLab/marple-pgt for Pgt
