@@ -1,7 +1,7 @@
 #!/bin/bash
 # last update: 12/01/2024
 
-run_cmd="snakemake --cores all"
+run_cmd="snakemake --cores all --rerun-incomplete"
 
 while [[ "$#" -gt 0 ]]; do
     case $1 in
