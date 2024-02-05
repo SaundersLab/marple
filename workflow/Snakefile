@@ -249,8 +249,8 @@ rule flatten:
     log: "logs/{organism}/{sample}/flatten_{sample}.log"
     shell: 
         """
-        echo \>{wildcards.sample} > {output}
-        grep -v \> {input} | tr -d '\n' >> {output}
+        echo \\>{wildcards.sample} > {output}
+        grep -v \\> {input} | tr -d '\n' >> {output}
         echo >> {output}
         """
 
