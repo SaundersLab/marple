@@ -18,7 +18,7 @@ marple
 > These functions can be executed from anywhere in the system.
 
 > [!IMPORTANT]
-> The functions here, assume the reads are in `/var/lib/minknow/data/reads/` and marple in `/home/$USER/`.
+> The functions here, assume the reads are in `/var/lib/minknow/data/` and marple in `/home/$USER/`.
 
 > [!TIP]
 > You can also access just the environment to run other commands in `/home/$USER/marple`, using:
