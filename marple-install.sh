@@ -6,7 +6,7 @@ cwd=$(pwd)
 
 if [ $cwd != $wd ]; then
         echo "The marple directory should be in /home/$USER/marple. Move and try again"
-        :
+        exit 1
 fi
 
 # Create backup of .bashrc and add marple functions
@@ -30,25 +30,27 @@ fi
 pckg="snakemake bwa star samtools nanoq fastqc gffread multiqc fasttree openpyxl matplotlib biopython"
 
 if command -v mamba &> /dev/null; then
-if mamba env list | grep -q marple-env; then
+        if mamba env list | grep -q marple-env; then
                 :
         else
                 mamba create -n marple-env -y -c bioconda -c conda-forge $pckg
         fi
 elif [[ "$OSTYPE" == "linux-gnu"* || "$OSTYPE" == "darwin"* ]]; then
-        echo "$OSTYPE"
         if [[ "$OSTYPE" == "linux-gnu"* ]]; then
                 sudo apt-get install bzip2
+                wget -qO- https://micromamba.snakepit.net/api/micromamba/linux-64/latest | tar -xvj bin/micromamba
+                ./bin/micromamba shell init -s bash -p ~/micromamba
+                source ~/.bashrc
+                sleep 1
+                micromamba create -n base -c conda-forge -y
+                micromamba activate base
         elif [[ "$OSTYPE" == "darwin"* ]]; then
                 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
                 brew install bzip2
+                brew install micromamba
+                eval "$(micromamba shell hook --shell bash)"
+                micromamba activate
         fi
-        wget -qO- https://micromamba.snakepit.net/api/micromamba/linux-64/latest | tar -xvj bin/micromamba
-        ./bin/micromamba shell init -s bash -p ~/micromamba
-        source ~/.bashrc
-        sleep 1
-        micromamba create -n base -c conda-forge -y
-        micromamba activate base
         micromamba install mamba -c conda-forge -y
         mamba create -n marple-env -y -c bioconda -c conda-forge $pckg
         mamba init
