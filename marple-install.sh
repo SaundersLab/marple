@@ -18,8 +18,8 @@ if [[ ! -d ".marple-tmp" ]]; then
         # echo -e '\nfunction transfer-pgt () {\ncat /var/lib/minknow/data/reads/$1/*/*/basecalling/pass/$2/*.fastq.gz > /home/$USER/marple/reads/pgt/$3.fastq.gz\n}' >> ~/.bashrc
         # echo -e '\nfunction transfer-pst () {\ncat /var/lib/minknow/data/reads/$1/*/*/basecalling/pass/$2/*.fastq.gz > /home/$USER/marple/reads/pst/$3.fastq.gz\n}' >> ~/.bashrc
 
-        echo -e '\nfunction transfer-pgt() {\nexperiment=$1\nshift\nfor arg in "$@";do\nIFS="=" read -r barcode sample<<<"$arg"\nfind /var/lib/minknow/data/* -type d -name "$experiment" 2>/dev/null | while read dir; do\ncat $dir/*/*/basecalling/pass/"$barcode"/*.fastq.gz > /home/$USER/marple/reads/pgt/"$sample".fastq.gz\ndone\ndone\n}' >> ~/.bashrc
-        echo -e '\nfunction transfer-pst() {\nexperiment=$1\nshift\nfor arg in "$@";do\nIFS="=" read -r barcode sample<<<"$arg"\nfind /var/lib/minknow/data/* -type d -name "$experiment" 2>/dev/null | while read dir; do\ncat $dir/*/*/basecalling/pass/"$barcode"/*.fastq.gz > /home/$USER/marple/reads/pst/"$sample".fastq.gz\ndone\ndone\n}' >> ~/.bashrc
+        echo -e '\nfunction transfer-pgt() {\nexperiment=$1\nshift\nfor arg in "$@";do\nIFS="=" read -r barcode sample<<<"$arg"\nfind /var/lib/minknow/data/* -type d -name "$experiment" 2>/dev/null | xargs -I {} find '{}' -type d -name basecalling | while read dir; do\ncat $dir/pass/"$barcode"/*.fastq.gz > /home/$USER/marple/reads/pgt/"$sample".fastq.gz\ndone\ndone\n}' >> ~/.bashrc
+        echo -e '\nfunction transfer-pst() {\nexperiment=$1\nshift\nfor arg in "$@";do\nIFS="=" read -r barcode sample<<<"$arg"\nfind /var/lib/minknow/data/* -type d -name "$experiment" 2>/dev/null | xargs -I {} find '{}' -type d -name basecalling | while read dir; do\ncat $dir/pass/"$barcode"/*.fastq.gz > /home/$USER/marple/reads/pst/"$sample".fastq.gz\ndone\ndone\n}' >> ~/.bashrc
         echo -e '\nfunction marple() {\npushd /home/$USER/marple \nmamba activate marple-env \nbash marple.sh $1 \nmamba deactivate \npopd\n}' >> ~/.bashrc
         echo -e '\nexport -f transfer-pgt' >> ~/.bashrc
         echo -e 'export -f transfer-pst' >> ~/.bashrc
