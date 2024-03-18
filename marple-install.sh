@@ -1,5 +1,5 @@
 #!/bin/bash
-# last update: 22/01/2024
+# last update: 18/03/2024
 
 wd=/home/$USER/marple
 cwd=$(pwd)
@@ -9,22 +9,41 @@ if [ $cwd != $wd ]; then
         exit 1
 fi
 
+# These old transfer-p[g/s]t may be useful for future GUI implementation
+# echo -e '\nfunction transfer-pgt () {\ncat /var/lib/minknow/data/reads/$1/*/*/basecalling/pass/$2/*.fastq.gz > /home/$USER/marple/reads/pgt/$3.fastq.gz\n}' >> ~/.bashrc
+# echo -e '\nfunction transfer-pst () {\ncat /var/lib/minknow/data/reads/$1/*/*/basecalling/pass/$2/*.fastq.gz > /home/$USER/marple/reads/pst/$3.fastq.gz\n}' >> ~/.bashrc
+
+transfer_pst_func='\nfunction transfer-pgt() {\nexperiment=$1\nshift\nfor arg in "$@";do\nIFS="=" read -r barcode sample<<<"$arg"\nfind /var/lib/minknow/data/* -type d -name "$experiment" 2>/dev/null | xargs -I {} find '{}' -type d -name basecalling | while read dir; do\ncat $dir/pass/"$barcode"/*.fastq.gz > /home/$USER/marple/reads/pgt/"$sample".fastq.gz\ndone\ndone\n}'
+transfer_pgt_func='\nfunction transfer-pst() {\nexperiment=$1\nshift\nfor arg in "$@";do\nIFS="=" read -r barcode sample<<<"$arg"\nfind /var/lib/minknow/data/* -type d -name "$experiment" 2>/dev/null | xargs -I {} find '{}' -type d -name basecalling | while read dir; do\ncat $dir/pass/"$barcode"/*.fastq.gz > /home/$USER/marple/reads/pst/"$sample".fastq.gz\ndone\ndone\n}'
+marple_func='\nfunction marple() {\npushd /home/$USER/marple \nmamba activate marple-env \nbash marple.sh $1 \nmamba deactivate \npopd\n}'
+
 # Create backup of .bashrc and add marple functions
 if [[ ! -d ".marple-tmp" ]]; then
         mkdir .marple-tmp
         cp ~/.bashrc .marple-tmp/bashrc.bak
 
-        # These old transfer-p[g/s]t may be useful for future GUI implementation
-        # echo -e '\nfunction transfer-pgt () {\ncat /var/lib/minknow/data/reads/$1/*/*/basecalling/pass/$2/*.fastq.gz > /home/$USER/marple/reads/pgt/$3.fastq.gz\n}' >> ~/.bashrc
-        # echo -e '\nfunction transfer-pst () {\ncat /var/lib/minknow/data/reads/$1/*/*/basecalling/pass/$2/*.fastq.gz > /home/$USER/marple/reads/pst/$3.fastq.gz\n}' >> ~/.bashrc
-
-        echo -e '\nfunction transfer-pgt() {\nexperiment=$1\nshift\nfor arg in "$@";do\nIFS="=" read -r barcode sample<<<"$arg"\nfind /var/lib/minknow/data/* -type d -name "$experiment" 2>/dev/null | xargs -I {} find '{}' -type d -name basecalling | while read dir; do\ncat $dir/pass/"$barcode"/*.fastq.gz > /home/$USER/marple/reads/pgt/"$sample".fastq.gz\ndone\ndone\n}' >> ~/.bashrc
-        echo -e '\nfunction transfer-pst() {\nexperiment=$1\nshift\nfor arg in "$@";do\nIFS="=" read -r barcode sample<<<"$arg"\nfind /var/lib/minknow/data/* -type d -name "$experiment" 2>/dev/null | xargs -I {} find '{}' -type d -name basecalling | while read dir; do\ncat $dir/pass/"$barcode"/*.fastq.gz > /home/$USER/marple/reads/pst/"$sample".fastq.gz\ndone\ndone\n}' >> ~/.bashrc
-        echo -e '\nfunction marple() {\npushd /home/$USER/marple \nmamba activate marple-env \nbash marple.sh $1 \nmamba deactivate \npopd\n}' >> ~/.bashrc
+        echo -e "$transfer_pst_func" >> ~/.bashrc
+        echo -e "$transfer_pgt_func" >> ~/.bashrc
+        echo -e "$marple_func" >> ~/.bashrc
         echo -e '\nexport -f transfer-pgt' >> ~/.bashrc
         echo -e 'export -f transfer-pst' >> ~/.bashrc
         echo -e 'export -f marple\n' >> ~/.bashrc
         source ~/.bashrc
+else
+        echo "Do you want to update the functions for MARPLE?"
+        select yn in "Yes" "No"; do
+        case $yn in
+        Yes )
+        sed -i '/^function marple() {$/,/^}$/d' ~/.bashrc;
+        sed -i '/^function transfer-pgt() {$/,/^}$/d' ~/.bashrc;
+        sed -i '/^function transfer-pst() {$/,/^}$/d' ~/.bashrc;
+        echo -e "$transfer_pst_func" >> ~/.bashrc;
+        echo -e "$transfer_pgt_func" >> ~/.bashrc;
+        echo -e "$marple_func" >> ~/.bashrc;
+        break;;
+        No ) break;;
+        esac
+        done
 fi
 
 pckg="snakemake bwa star samtools nanoq fastqc gffread multiqc fasttree openpyxl matplotlib biopython"
