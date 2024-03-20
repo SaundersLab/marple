@@ -18,7 +18,7 @@ transfer_pgt_func='\nfunction transfer-pst() {\nexperiment=$1\nshift\nfor arg in
 marple_func='\nfunction marple() {\npushd /home/$USER/marple \nmamba activate marple-env \nbash marple.sh $1 \nmamba deactivate \npopd\n}'
 
 # Create backup of .bashrc and add marple functions
-if [[ ! -d ".marple-tmp" ]]; then
+if [[ ! -d ".marple-tmp" ]] && [[ $(grep -L transfer-pgt ~/.bashrc) ]]; then
         mkdir .marple-tmp
         cp ~/.bashrc .marple-tmp/bashrc.bak
 
@@ -29,11 +29,12 @@ if [[ ! -d ".marple-tmp" ]]; then
         echo -e 'export -f transfer-pst' >> ~/.bashrc
         echo -e 'export -f marple\n' >> ~/.bashrc
         source ~/.bashrc
-else
+elif [[ $(grep transfer-pgt ~/.bashrc) ]]; then
         echo "Do you want to update the functions for MARPLE?"
         select yn in "Yes" "No"; do
         case $yn in
         Yes )
+        cp ~/.bashrc .marple-tmp/bashrc.bak
         sed -i '/^function marple() {$/,/^}$/d' ~/.bashrc;
         sed -i '/^function transfer-pgt() {$/,/^}$/d' ~/.bashrc;
         sed -i '/^function transfer-pst() {$/,/^}$/d' ~/.bashrc;
