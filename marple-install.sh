@@ -34,6 +34,7 @@ elif [[ $(grep transfer-pgt ~/.bashrc) ]]; then
         select yn in "Yes" "No"; do
         case $yn in
         Yes )
+        mkdir -p .marple-tmp
         cp ~/.bashrc .marple-tmp/bashrc.bak
         sed -i '/^function marple() {$/,/^}$/d' ~/.bashrc;
         sed -i '/^function transfer-pgt() {$/,/^}$/d' ~/.bashrc;
