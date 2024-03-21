@@ -18,6 +18,7 @@ done
 
 if command -v mamba &> /dev/null; then
     if mamba env list | grep -q marple-env; then
+    		conda activate marple-env
 		$run_cmd
         exit 0
 	else
