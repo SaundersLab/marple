@@ -4,7 +4,7 @@
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
         wd=/home/$USER/marple
         bashf=~/.bashrc
-elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+elif [[ "$OSTYPE" == "darwin"* ]]; then
         wd=/Users/$USER/marple
         bashf=~/.bash_profile
 fi
