@@ -31,7 +31,7 @@ def visualise_tree(newick_path: str, metadata_path: str, out_path: str):
     metadata = sheets['metadata'].fillna('?').astype(str).set_index('tree_name').to_dict()
     style = {}
     for sheet_name, sheet in sheets.items():
-        if sheet_name == 'metadata':
+        if sheet_name == 'metadata' or sheet_name == 'genetic_group':
             continue
         style[sheet_name] = sheet.set_index(
             sheet_name)[['color', 'marker']].to_dict(orient='index')
