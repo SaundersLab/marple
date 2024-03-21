@@ -25,30 +25,30 @@ transfer_pst_func='\nfunction transfer-pgt() {\nexperiment=$1\nshift\nfor arg in
 transfer_pgt_func='\nfunction transfer-pst() {\nexperiment=$1\nshift\nfor arg in "$@";do\nIFS="=" read -r barcode sample<<<"$arg"\nfind /var/lib/minknow/data/* -type d -name "$experiment" 2>/dev/null | xargs -I {} find '{}' -type d -name basecalling | while read dir; do\ncat $dir/pass/"$barcode"/*.fastq.gz > ~/marple/reads/pst/"$sample".fastq.gz\ndone\ndone\n}'
 
 # Create backup of .bashrc and add marple functions
-if [[ ! -d ".marple-tmp" ]] && [[ $(grep -L transfer-pgt ~/"$bashf") ]]; then
+if [[ ! -d ".marple-tmp" ]] && [[ $(grep -L transfer-pgt "$bashf") ]]; then
         mkdir .marple-tmp
-        cp ~/"$bashf" .marple-tmp/bashrc.bak
-        echo -e "$marple_func" >> ~/"$bashf"
-        echo -e "$transfer_pst_func" >> ~/"$bashf"
-        echo -e "$transfer_pgt_func" >> ~/"$bashf"
-        echo -e '\nexport -f marple' >> ~/"$bashf"
-        echo -e 'export -f transfer-pst' >> ~/"$bashf"
-        echo -e 'export -f transfer-pgt\n' >> ~/"$bashf"
-        source ~/"$bashf"
-elif [[ $(grep transfer-pgt ~/"$bashf") ]]; then
+        cp "$bashf" .marple-tmp/bashrc.bak
+        echo -e "$marple_func" >> "$bashf"
+        echo -e "$transfer_pst_func" >> "$bashf"
+        echo -e "$transfer_pgt_func" >> "$bashf"
+        echo -e '\nexport -f marple' >> "$bashf"
+        echo -e 'export -f transfer-pst' >> "$bashf"
+        echo -e 'export -f transfer-pgt\n' >> "$bashf"
+        source "$bashf"
+elif [[ $(grep transfer-pgt "$bashf") ]]; then
         echo "Do you want to update the functions for MARPLE?"
         select yn in "Yes" "No"; do
         case $yn in
         Yes )
         mkdir -p .marple-tmp
-        sed -i-e '/function marple() {/,/export -f transfer-pgt/d' ~/"$bashf";
-        mv ~/"$bashf"-e .marple-tmp/bashrc.bak
-        echo -e "$marple_func" >> ~/"$bashf";
-        echo -e "$transfer_pst_func" >> ~/"$bashf";
-        echo -e "$transfer_pgt_func" >> ~/"$bashf";
-        echo -e '\nexport -f marple' >> ~/"$bashf"
-        echo -e 'export -f transfer-pst' >> ~/"$bashf"
-        echo -e 'export -f transfer-pgt\n' >> ~/"$bashf"
+        sed -i-e '/function marple() {/,/export -f transfer-pgt/d' "$bashf";
+        mv "$bashf"-e .marple-tmp/bashrc.bak
+        echo -e "$marple_func" >> "$bashf";
+        echo -e "$transfer_pst_func" >> "$bashf";
+        echo -e "$transfer_pgt_func" >> "$bashf";
+        echo -e '\nexport -f marple' >> "$bashf"
+        echo -e 'export -f transfer-pst' >> "$bashf"
+        echo -e 'export -f transfer-pgt\n' >> "$bashf"
         break;;
         No ) break;;
         esac
@@ -68,7 +68,7 @@ elif [[ "$OSTYPE" == "linux-gnu"* || "$OSTYPE" == "darwin"* ]]; then
                 sudo apt-get install bzip2
                 wget -qO- https://micromamba.snakepit.net/api/micromamba/linux-64/latest | tar -xvj bin/micromamba
                 ./bin/micromamba shell init -s bash -p ~/micromamba
-                source ~/"$bashf"
+                source "$bashf"
                 sleep 1
                 micromamba create -n base -c conda-forge -y
                 micromamba activate base
