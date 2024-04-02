@@ -1,0 +1,44 @@
+{
+  "title": "MARPLE Diagnostics",
+  "colorings": [
+      {
+        "title": "genetic group",
+        "type": "categorical",
+        "key": "group"
+      },
+    {
+        "title": "country",
+        "type": "categorical",
+        "key": "country"
+    },
+    {
+        "title": "region",
+        "type": "categorical",
+        "key": "region"
+    }
+],
+  "geo_resolutions": [
+    "location",
+    "country",
+    "region"
+  ],
+  "display_defaults": {
+    "color_by": "group"
+  },
+  "maintainer": [
+    "Saunders Lab",
+    "https://www.jic.ac.uk/people/diane-saunders/"
+  ],
+  "filters": [
+    "country",
+    "author",
+    "host",
+    "group",
+    "collector",
+    "region"
+  ],
+  "panels": [
+    "tree",
+    "map"
+  ]
+}
