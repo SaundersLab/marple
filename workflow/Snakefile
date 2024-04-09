@@ -289,7 +289,7 @@ rule visualise_tree:
     conda: "envs/visualise_tree.yml"
     script: "scripts/visualise_tree.py"
 
-    rule convert_metaxls:
+rule convert_metaxls:
     input:
         metadata="resources/{organism}/{organism}_sample_metadata.xlsx"
     output:
