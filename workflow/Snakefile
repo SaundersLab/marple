@@ -294,7 +294,7 @@ rule visualise_tree:
         metadata="resources/{organism}/{organism}_sample_metadata.xlsx"
     output:
         metadata="resources/{organism}/{organism}_sample_metadata.csv"
-    log: "logs/{organism}/nextstrain/ns_convertxls.log"
+    log: "logs/{organism}/auspice/convertxls.log"
     shell:
         """
         ssconvert {input.metadata} {output.metadata}
@@ -311,7 +311,7 @@ rule rename_tree:
     output:
         mvfna="results/{organism}/trees/auspice/renamed_{organism}_{existing_samples}.ffn",
         mvnwk="results/{organism}/trees/auspice/renamed_{organism}_{existing_samples}.nwk"
-    log: "logs/{organism}/nextstrain/ns_rename_{existing_samples}.log"
+    log: "logs/{organism}/auspice/rename-fna-nwk_{existing_samples}.log"
     shell:
         """
         cp {input.treefna} {output.mvfna}tmp
@@ -336,8 +336,8 @@ rule index_sequences:
         sequences=rules.rename_tree.output.mvfna
     output:
         indexed_sequences="results/{organism}/trees/auspice/{organism}_{existing_samples}.tsv"
-    log: "logs/{organism}/nextstrain/ns_index_{existing_samples}.log"
-    shell: "augur index --sequences {input.sequences} --output {output.indexed_sequences}"
+    log: "logs/{organism}/auspice/index_{existing_samples}.log"
+    shell: "augur index --sequences {input.sequences} --output {output.indexed_sequences} > {log} 2>&1"
 
 rule refine:
     input:
@@ -347,7 +347,7 @@ rule refine:
     output:
         tree="results/{organism}/trees/auspice/{existing_samples}_tree.nwk",
         node_data="results/{organism}/trees/auspice/{existing_samples}_branch_lengths.json"
-    log: "logs/{organism}/nextstrain/ns_refine_{existing_samples}.log"
+    log: "logs/{organism}/auspice/refine_{existing_samples}.log"
     shell:
         """
         augur refine \
@@ -355,7 +355,7 @@ rule refine:
         --tree {input.tree} \
         --metadata {input.metadata} \
         --output-tree {output.tree} \
-        --output-node-data {output.node_data} > /dev/null 2>&1
+        --output-node-data {output.node_data} > {log} 2>&1
         """
 
 rule ancestral:
@@ -366,14 +366,14 @@ rule ancestral:
         node_data="results/{organism}/trees/auspice/{existing_samples}_nt_muts.json"
     params:
         inference="joint"
-    log: "logs/{organism}/nextstrain/ns_ancestral_{existing_samples}.log"
+    log: "logs/{organism}/auspice/ancestral_{existing_samples}.log"
     shell:
         """
         augur ancestral \
         --tree {input.tree} \
         --alignment {input.sequences} \
         --output-node-data {output.node_data} \
-        --inference {params.inference} > /dev/null 2>&1
+        --inference {params.inference} > {log} 2>&1
         """
 
 rule traits:
@@ -384,7 +384,7 @@ rule traits:
         traits="results/{organism}/trees/auspice/{existing_samples}_traits.json"
     params:
         columns="country region"
-    log: "logs/{organism}/nextstrain/ns_traits_{existing_samples}.log"
+    log: "logs/{organism}/auspice/traits_{existing_samples}.log"
     shell:
         """
         augur traits \
@@ -392,7 +392,7 @@ rule traits:
         --metadata {input.metadata} \
         --output-node-data {output.traits} \
         --columns {params.columns} \
-        --confidence > /dev/null 2>&1 
+        --confidence > {log} 2>&1 
         """
 
 rule export:
@@ -407,7 +407,7 @@ rule export:
         auspice_config="config/auspice/auspice_config.json"
     output:
         auspice_json="results/auspice/{organism}_{existing_samples}_auspice.json"
-    log: "logs/{organism}/nextstrain/ns_export_{existing_samples}.log"
+    log: "logs/{organism}/auspice/export_{existing_samples}.log"
     shell:
         """
         augur export v2 \
@@ -418,5 +418,5 @@ rule export:
         --lat-longs {input.lat_longs} \
         --auspice-config {input.auspice_config} \
         --include-root-sequence \
-        --output {output.auspice_json} > /dev/null 2>&1
+        --output {output.auspice_json} > {log} 2>&1
         """
