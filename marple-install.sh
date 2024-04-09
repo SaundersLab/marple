@@ -19,7 +19,7 @@ fi
 marple_func='\nfunction marple() {\npushd ~/marple \nmamba activate marple-env \ncat .version.info \nbash marple.sh $1 \nmamba deactivate \npopd\n}'
 transfer_pst_func='\nfunction transfer-pgt() {\nexperiment=$1\nshift\nfor arg in "$@";do\nIFS="=" read -r barcode sample<<<"$arg"\nfind /var/lib/minknow/data/* -type d -name "$experiment" 2>/dev/null | xargs -I {} find '{}' -type d -name basecalling | while read dir; do\ncat $dir/pass/"$barcode"/*.fastq.gz > ~/marple/reads/pgt/"$sample".fastq.gz\ndone\ndone\n}'
 transfer_pgt_func='\nfunction transfer-pst() {\nexperiment=$1\nshift\nfor arg in "$@";do\nIFS="=" read -r barcode sample<<<"$arg"\nfind /var/lib/minknow/data/* -type d -name "$experiment" 2>/dev/null | xargs -I {} find '{}' -type d -name basecalling | while read dir; do\ncat $dir/pass/"$barcode"/*.fastq.gz > ~/marple/reads/pst/"$sample".fastq.gz\ndone\ndone\n}'
-auspice_func='\nfunction tree() {\nauspice develop --extend ~/marple/config/auspice/auspiceCustomisations/config.json --datasetDir ~/marple/results/auspice/ & xdg-open http://localhost:4000\n}'
+auspice_func='\nfunction marple-tree() {\nauspice develop --extend ~/marple/config/auspice/auspiceCustomisations/config.json --datasetDir ~/marple/results/auspice/ > /dev/null 2>&1 & xdg-open http://localhost:4000\n}'
 
 # Create backup of .bashrc and add marple functions
 if [[ ! -d ".marple-tmp" ]] && [[ $(grep -L transfer-pgt "$bashf") ]]; then
@@ -32,7 +32,7 @@ if [[ ! -d ".marple-tmp" ]] && [[ $(grep -L transfer-pgt "$bashf") ]]; then
         echo -e '\nexport -f marple' >> "$bashf"
         echo -e 'export -f transfer-pst' >> "$bashf"
         echo -e 'export -f transfer-pgt' >> "$bashf"
-        echo -e 'export -f tree\n' >> "$bashf"
+        echo -e 'export -f marple-tree\n' >> "$bashf"
         source "$bashf"
 elif [[ $(grep transfer-pgt "$bashf") ]]; then
         while true; do
@@ -40,7 +40,7 @@ elif [[ $(grep transfer-pgt "$bashf") ]]; then
         case $yn in
         [Yy]* )
         mkdir -p .marple-tmp
-        sed -i-e '/function marple() {/,/export -f tree/d' "$bashf";
+        sed -i-e '/function marple() {/,/export -f marple-tree/d' "$bashf";
         mv "$bashf"-e .marple-tmp/bashrc.bak
         echo -e "$marple_func" >> "$bashf";
         echo -e "$transfer_pst_func" >> "$bashf";
@@ -49,7 +49,7 @@ elif [[ $(grep transfer-pgt "$bashf") ]]; then
         echo -e '\nexport -f marple' >> "$bashf"
         echo -e 'export -f transfer-pst' >> "$bashf"
         echo -e 'export -f transfer-pgt' >> "$bashf"
-        echo -e 'export -f tree\n' >> "$bashf"
+        echo -e 'export -f marple-tree\n' >> "$bashf"
         break;;
         [Nn]* ) break;;
         * ) echo "Please select an option [Yn] ";;

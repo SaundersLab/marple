@@ -1,19 +1,28 @@
+Country	Australia	#E74C3C
 Country	Austria	#238E23
 Country	Azerbaijan	#2F4F2F
 Country	Belgium	#FF00FF
+Country	Brazil	#ABEBC6
 Country	Bulgaria	#0000FF
 Country	Canada	#236B8E
 Country	Chile	#CFB53B
 Country	China	#527F76
 Country	Croatia	#007FFF
-Country	Czech Republic	#9932CD
+Country	Czechia	#9932CD
 Country	Denmark	#00FFFF
+Country	Eritrea	#D0474E
 Country	Ethiopia	#B5A642
 Country	France	#545454
 Country	Germany	#DB70DB
+Country	Hungary	#FFD700
+Country	Iran	#00FF00
+Country	Israel	#364271
 Country	Italy	#CC3299
 Country	Kenya	#BEADED
 Country	Lesotho	#FF0000
+Country	Madagascar	#EDBB99
+Country	Mexico	#F7DC6F
+Country	Morocco	#145A32
 Country	New Zealand	#99CC32
 Country	Pakistan	#DB9370
 Country	Poland	#871F78
@@ -23,8 +32,11 @@ Country	Slovakia	#5C4033
 Country	South Africa	#F5CCB0
 Country	Spain	#FF7F00
 Country	Sweden	#5F9F9F
+Country	Tanzania	#5B4836
 Country	Turkey	#FFFF00
+Country	Uganda	#C5B358
 Country	UK	#855E42
+Country	Uruguay	#F74ABD
 Country	USA	#5959AB
 Country	Uzbekistan	#238E68
 Country	Zimbabwe	#14F624
