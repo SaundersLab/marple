@@ -289,11 +289,12 @@ rule visualise_tree:
     conda: "envs/visualise_tree.yml"
     script: "scripts/visualise_tree.py"
 
-rule convert_metaxls:
+    rule convert_metaxls:
     input:
         metadata="resources/{organism}/{organism}_sample_metadata.xlsx"
     output:
-        metadata=temp("resources/{organism}/{organism}_sample_metadata.csv")
+        metadata="resources/{organism}/{organism}_sample_metadata.csv"
+    log: "logs/{organism}/nextstrain/ns_convertxls.log"
     shell:
         """
         ssconvert {input.metadata} {output.metadata}
@@ -308,8 +309,8 @@ rule rename_tree:
         treefna=rules.tree.input,
         treenwk=rules.tree.output
     output:
-        mvfna=temp("results/{organism}/trees/ns/renamed_{organism}_{existing_samples}.ffn"),
-        mvnwk=temp("results/{organism}/trees/ns/renamed_{organism}_{existing_samples}.nwk")
+        mvfna="results/{organism}/trees/auspice/renamed_{organism}_{existing_samples}.ffn",
+        mvnwk="results/{organism}/trees/auspice/renamed_{organism}_{existing_samples}.nwk"
     log: "logs/{organism}/nextstrain/ns_rename_{existing_samples}.log"
     shell:
         """
@@ -334,8 +335,9 @@ rule index_sequences:
     input:
         sequences=rules.rename_tree.output.mvfna
     output:
-        indexed_sequences=temp("results/{organism}/trees/ns/{organism}_{existing_samples}.tsv")
-    shell: "augur index --sequences {input.sequences} --output {output.indexed_sequences} > /dev/null 2>&1"
+        indexed_sequences="results/{organism}/trees/auspice/{organism}_{existing_samples}.tsv"
+    log: "logs/{organism}/nextstrain/ns_index_{existing_samples}.log"
+    shell: "augur index --sequences {input.sequences} --output {output.indexed_sequences}"
 
 rule refine:
     input:
@@ -343,8 +345,8 @@ rule refine:
         metadata=rules.convert_metaxls.output.metadata,
         tree=rules.rename_tree.output.mvnwk
     output:
-        tree=temp("results/{organism}/trees/ns/{existing_samples}_tree.nwk"),
-        node_data=temp("results/{organism}/trees/ns/{existing_samples}_branch_lengths.json")
+        tree="results/{organism}/trees/auspice/{existing_samples}_tree.nwk",
+        node_data="results/{organism}/trees/auspice/{existing_samples}_branch_lengths.json"
     log: "logs/{organism}/nextstrain/ns_refine_{existing_samples}.log"
     shell:
         """
@@ -353,60 +355,18 @@ rule refine:
         --tree {input.tree} \
         --metadata {input.metadata} \
         --output-tree {output.tree} \
-        --output-node-data {output.node_data} \
-        --timetree > /dev/null 2>&1
+        --output-node-data {output.node_data} > /dev/null 2>&1
         """
-
-#rule ancestral_file1:
-#    input:
-#        primermeta="resources/{organism}/{organism}_primer_metadata.csv",
-#        annotation="resources/{organism}/reference/{organism}.gff"
-#    output:
-#        genelist=temp("results/{organism}/genes/{organism}_genelist.txt"),
-#        annotation=temp("results/{organism}/genes/{organism}.gff")
-#    shell:
-#        """
-#        tail -n +2 {input.primermeta} | awk -F, '{{print $1}}' | cut -d'_' -f1-2 > {output.genelist}
-#        cat {input.annotation} | awk '{{if ($3 == "gene") print $0;}}'> {output.annotation}
-#        """
-#genes=[{gene} for gene in open("results/{organism}/genes/{organism}_genelist.txt")]
-#rule ancestral_file2:
-#    input:
-#        reference="resources/{organism}/reference/{organism}.fna",
-#        annotation=rules.ancestral_file1.output.annotation,
-#        *genes
-#    output:
-#        genefna=temp(expand('results/{organism}/genes/{genes}.fna'))
-#    run:
-#        from Bio import SeqIO
-#        def find_gene(gene_name):
-#            with open({input.annotation}) as f:
-#                for line in f:
-#                    if gene_name in line:
-#                        parts=line.split()
-#                        return parts[0],int(parts[3]),int(parts[4])
-#            return None
-#        with open('{output.genelist}','r') as f:
-#            gene_list=f.read().splitlines()
-#            gene_names=[gene.strip() for gene in gene_list]
-#        sequences = {record.id: str(record.seq) for record in SeqIO.parse({input.reference}, 'fasta')}
-#        for gene_name in gene_names:
-#            gene_info = find_gene(gene_name)
-#            if gene_info:
-#                gene_id, start, end = gene_info
-#            with open(f'results/{organism}/genes/{gene_name}.fna', 'w') as outf:
-#                    outf.write('f>{gene_id}\n{sequences[start-1,end]}')
 
 rule ancestral:
     input:
         tree=rules.refine.output.tree,
-        sequences=rules.rename_tree.output.mvfna,
-#        annotation=rules.ancestral_file1.output.annotation,
-#        genelist=rules.ancestral_file1.output.genelist
+        sequences=rules.rename_tree.output.mvfna
     output:
-        node_data=temp("results/{organism}/trees/ns/{existing_samples}_nt_muts.json"),
+        node_data="results/{organism}/trees/auspice/{existing_samples}_nt_muts.json"
     params:
         inference="joint"
+    log: "logs/{organism}/nextstrain/ns_ancestral_{existing_samples}.log"
     shell:
         """
         augur ancestral \
@@ -415,18 +375,16 @@ rule ancestral:
         --output-node-data {output.node_data} \
         --inference {params.inference} > /dev/null 2>&1
         """
-#        --annotation {input.annotation} \
-#        --genes {input.genelist} \
-#        --translations 'results/{organism}/genes/%GENE.fna' \
-        
+
 rule traits:
     input:
         tree=rules.refine.output.tree,
         metadata=rules.convert_metaxls.output.metadata
     output:
-        traits=temp("results/{organism}/trees/ns/{existing_samples}_traits.json")
+        traits="results/{organism}/trees/auspice/{existing_samples}_traits.json"
     params:
         columns="country region"
+    log: "logs/{organism}/nextstrain/ns_traits_{existing_samples}.log"
     shell:
         """
         augur traits \
@@ -434,7 +392,7 @@ rule traits:
         --metadata {input.metadata} \
         --output-node-data {output.traits} \
         --columns {params.columns} \
-        --confidence > /dev/null 2>&1
+        --confidence > /dev/null 2>&1 
         """
 
 rule export:
@@ -444,11 +402,12 @@ rule export:
         branch_lengths=rules.refine.output.node_data,
         traits=rules.traits.output.traits,
         nt_muts=rules.ancestral.output.node_data,
-        colors="config/ns/colors.tsv",
-        lat_longs="config/ns/lat_longs.tsv",
-        auspice_config="config/ns/auspice_config.json"
+        colors="config/auspice/colors.tsv",
+        lat_longs="config/auspice/lat_longs.tsv",
+        auspice_config="config/auspice/auspice_config.json"
     output:
         auspice_json="results/auspice/{organism}_{existing_samples}_auspice.json"
+    log: "logs/{organism}/nextstrain/ns_export_{existing_samples}.log"
     shell:
         """
         augur export v2 \

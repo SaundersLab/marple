@@ -2,12 +2,12 @@
   "title": "MARPLE Diagnostics",
   "colorings": [
       {
-        "title": "genetic group",
+        "title": "Genetic Group",
         "type": "categorical",
         "key": "group"
       },
     {
-        "title": "country",
+        "title": "Country",
         "type": "categorical",
         "key": "country"
     },
@@ -15,6 +15,11 @@
         "title": "region",
         "type": "categorical",
         "key": "region"
+    },
+    {
+       "title": "Clade",
+       "type": "categorical",
+       "key": "clade"
     }
 ],
   "geo_resolutions": [
@@ -35,10 +40,12 @@
     "host",
     "group",
     "collector",
-    "region"
+    "region",
+    "clade"
   ],
   "panels": [
     "tree",
     "map"
   ]
-}
+  }
+
