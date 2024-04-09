@@ -1,7 +1,7 @@
 #!/bin/bash
 # last update: 12/01/2024
 
-run_cmd="snakemake --cores all --rerun-incomplete"
+run_cmd="snakemake --cores all --rerun-incomplete --quiet --scheduler greedy"
 
 while [[ "$#" -gt 0 ]]; do
     case $1 in
@@ -19,7 +19,7 @@ done
 if command -v mamba &> /dev/null; then
     if mamba env list | grep -q marple-env; then
     		conda activate marple-env
-		$run_cmd
+		$run_cmd 
         exit 0
 	else
 		echo "Environment marple-env not found."

@@ -20,6 +20,7 @@ def all_inputs(wildcards):
     for organism in samples:
         inputs[f'{organism}_tree'] = f'results/{organism}/trees/{organism}_all.pdf'
         inputs[f'{organism}_report'] = f'results/{organism}/report/{organism}.multiqc.html'
+        inputs[f'{organism}_auspice_json'] = f'results/auspice/{organism}_all_auspice.json'
     return inputs
 
 rule all:
@@ -32,7 +33,7 @@ def primer_performance_summaries(wildcards):
     return [
         f"results/{organism}/{sample}/primer_performance/{sample}_primer_performance_by_{groupby}.csv"
         for groupby in config['primer_performance_groups']
-    ]
+        ]
 
 rule create_sample_multiqc_row:
     input:
@@ -51,7 +52,7 @@ rule summarise_primer_performance:
         primer_performance_summary="results/{organism}/{sample}/primer_performance/{sample}_primer_performance_by_{groupby}.csv"
     log: "logs/{organism}/{sample}/summarise_primer_performance_by_{groupby}_{sample}.log"
     conda: "envs/visualise_tree.yml"
-    script: "scripts/summarise_primer_performance.py"
+    script: "scripts/summarise_primer_performance.py" 
 
 rule cumulative_amplicon_coverage:
     input:
@@ -110,7 +111,7 @@ rule bwa_index:
         )
     conda: "envs/bwa_samtools.yml"
     log: "logs/{organism}/bwa_index.log"
-    shell: "bwa index {input} >{log} 2>&1"
+    shell:"bwa index {input} >{log} 2>&1"
 
 rule bwa_mem:
     input:
@@ -288,5 +289,134 @@ rule visualise_tree:
     conda: "envs/visualise_tree.yml"
     script: "scripts/visualise_tree.py"
 
+    rule convert_metaxls:
+    input:
+        metadata="resources/{organism}/{organism}_sample_metadata.xlsx"
+    output:
+        metadata="resources/{organism}/{organism}_sample_metadata.csv"
+    log: "logs/{organism}/auspice/convertxls.log"
+    shell:
+        """
+        ssconvert {input.metadata} {output.metadata}
+        sed -i-e 's!tree_new_name!strain!g' {output.metadata}
+        sed -i-e 's!\"!!g' {output.metadata}
+        rm {output.metadata}-e*
+        """
 
+rule rename_tree:
+    input:
+        metadata=rules.convert_metaxls.output.metadata,
+        treefna=rules.tree.input,
+        treenwk=rules.tree.output
+    output:
+        mvfna="results/{organism}/trees/auspice/renamed_{organism}_{existing_samples}.ffn",
+        mvnwk="results/{organism}/trees/auspice/renamed_{organism}_{existing_samples}.nwk"
+    log: "logs/{organism}/auspice/rename-fna-nwk_{existing_samples}.log"
+    shell:
+        """
+        cp {input.treefna} {output.mvfna}tmp
+        cp {input.treenwk} {output.mvnwk}tmp
+        while IFS=, read -r old_name new_name _; do
+            new=$new_name|cut -d':' -f1
+            if grep -Fq $old_name {input.treefna}; then
+                echo 'renaming $old_name to $new_name in {input.treefna}'
+                sed -i "s!$old_name!$(echo $new_name | cut -d':' -f1)!" {output.mvfna}tmp
+            fi
+            if grep -Fq "$old_name" {input.treenwk}; then
+                echo 'renaming $old_name to $new_name in {input.treenwk}'
+                sed -i "s!$old_name!$(echo $new_name | cut -d':' -f1)!" {output.mvnwk}tmp
+            fi
+        done < {input.metadata} > {log}
+        mv {output.mvfna}tmp {output.mvfna}
+        mv {output.mvnwk}tmp {output.mvnwk}
+        """
 
+rule index_sequences:
+    input:
+        sequences=rules.rename_tree.output.mvfna
+    output:
+        indexed_sequences="results/{organism}/trees/auspice/{organism}_{existing_samples}.tsv"
+    log: "logs/{organism}/auspice/index_{existing_samples}.log"
+    shell: "augur index --sequences {input.sequences} --output {output.indexed_sequences} > {log} 2>&1"
+
+rule refine:
+    input:
+        sequences=rules.rename_tree.output.mvfna,
+        metadata=rules.convert_metaxls.output.metadata,
+        tree=rules.rename_tree.output.mvnwk
+    output:
+        tree="results/{organism}/trees/auspice/{existing_samples}_tree.nwk",
+        node_data="results/{organism}/trees/auspice/{existing_samples}_branch_lengths.json"
+    log: "logs/{organism}/auspice/refine_{existing_samples}.log"
+    shell:
+        """
+        augur refine \
+        --alignment {input.sequences} \
+        --tree {input.tree} \
+        --metadata {input.metadata} \
+        --output-tree {output.tree} \
+        --output-node-data {output.node_data} > {log} 2>&1
+        """
+
+rule ancestral:
+    input:
+        tree=rules.refine.output.tree,
+        sequences=rules.rename_tree.output.mvfna
+    output:
+        node_data="results/{organism}/trees/auspice/{existing_samples}_nt_muts.json"
+    params:
+        inference="joint"
+    log: "logs/{organism}/auspice/ancestral_{existing_samples}.log"
+    shell:
+        """
+        augur ancestral \
+        --tree {input.tree} \
+        --alignment {input.sequences} \
+        --output-node-data {output.node_data} \
+        --inference {params.inference} > {log} 2>&1
+        """
+
+rule traits:
+    input:
+        tree=rules.refine.output.tree,
+        metadata=rules.convert_metaxls.output.metadata
+    output:
+        traits="results/{organism}/trees/auspice/{existing_samples}_traits.json"
+    params:
+        columns="country region"
+    log: "logs/{organism}/auspice/traits_{existing_samples}.log"
+    shell:
+        """
+        augur traits \
+        --tree {input.tree} \
+        --metadata {input.metadata} \
+        --output-node-data {output.traits} \
+        --columns {params.columns} \
+        --confidence > {log} 2>&1 
+        """
+
+rule export:
+    input:
+        tree=rules.refine.output.tree,
+        metadata=rules.convert_metaxls.output.metadata,
+        branch_lengths=rules.refine.output.node_data,
+        traits=rules.traits.output.traits,
+        nt_muts=rules.ancestral.output.node_data,
+        colors="config/auspice/colors.tsv",
+        lat_longs="config/auspice/lat_longs.tsv",
+        auspice_config="config/auspice/auspice_config.json"
+    output:
+        auspice_json="results/auspice/{organism}_{existing_samples}_auspice.json"
+    log: "logs/{organism}/auspice/export_{existing_samples}.log"
+    shell:
+        """
+        augur export v2 \
+        --tree {input.tree} \
+        --metadata {input.metadata} \
+        --node-data {input.branch_lengths} {input.traits} {input.nt_muts} \
+        --colors {input.colors} \
+        --lat-longs {input.lat_longs} \
+        --auspice-config {input.auspice_config} \
+        --include-root-sequence \
+        --output {output.auspice_json} > {log} 2>&1
+        """
