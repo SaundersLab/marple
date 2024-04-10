@@ -1,5 +1,5 @@
 #!/bin/bash
-# last update: 09/04/2024
+# last update: 10/04/2024
 
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
         wd=/home/$USER/marple
@@ -19,7 +19,7 @@ fi
 marple_func='\nfunction marple() {\npushd ~/marple \nmamba activate marple-env \ncat .version.info \nbash marple.sh $1 \nmamba deactivate \npopd\n}'
 transfer_pst_func='\nfunction transfer-pgt() {\nexperiment=$1\nshift\nfor arg in "$@";do\nIFS="=" read -r barcode sample<<<"$arg"\nfind /var/lib/minknow/data/* -type d -name "$experiment" 2>/dev/null | xargs -I {} find '{}' -type d -name basecalling | while read dir; do\ncat $dir/pass/"$barcode"/*.fastq.gz > ~/marple/reads/pgt/"$sample".fastq.gz\ndone\ndone\n}'
 transfer_pgt_func='\nfunction transfer-pst() {\nexperiment=$1\nshift\nfor arg in "$@";do\nIFS="=" read -r barcode sample<<<"$arg"\nfind /var/lib/minknow/data/* -type d -name "$experiment" 2>/dev/null | xargs -I {} find '{}' -type d -name basecalling | while read dir; do\ncat $dir/pass/"$barcode"/*.fastq.gz > ~/marple/reads/pst/"$sample".fastq.gz\ndone\ndone\n}'
-auspice_func='\nfunction marple-tree() {\nauspice develop --extend ~/marple/config/auspice/auspiceCustomisations/config.json --datasetDir ~/marple/results/auspice/ > /dev/null 2>&1 & xdg-open http://localhost:4000\n}'
+auspice_func='\nfunction marple-tree() {\nnpx kill-port 4000 > /dev/null 2>&1\nauspice develop --extend ~/marple/config/auspice/auspiceCustomisations/config.json --datasetDir ~/marple/results/auspice/ > /dev/null 2>&1 & xdg-open http://localhost:4000\n}'
 
 # Create backup of .bashrc and add marple functions
 if [[ ! -d ".marple-tmp" ]] && [[ $(grep -L transfer-pgt "$bashf") ]]; then
@@ -79,6 +79,7 @@ if command -v mamba &> /dev/null; then
                 sudo npm install --global auspice
                 sudo npm install react
                 sudo npm install styled-components
+                sudo npm install kill-port
                 elif [[ "$OSTYPE" == "darwin"* ]]; then
                 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
                 brew install bzip2
@@ -87,6 +88,7 @@ if command -v mamba &> /dev/null; then
                 npm install --global auspice
                 npm install react
                 npm install styled-components
+                npm install kill-port
                 fi 
                 break;;
                 [Nn]* ) break;;
@@ -108,6 +110,7 @@ elif [[ "$OSTYPE" == "linux-gnu"* || "$OSTYPE" == "darwin"* ]]; then
                 sudo npm install --global auspice
                 sudo npm install react
                 sudo npm install styled-components
+                sudo npm install kill-port
                 wget -qO- https://micromamba.snakepit.net/api/micromamba/linux-64/latest | tar -xvj bin/micromamba
                 ./bin/micromamba shell init -s bash -p ~/micromamba
                 source "$bashf"
@@ -123,6 +126,7 @@ elif [[ "$OSTYPE" == "linux-gnu"* || "$OSTYPE" == "darwin"* ]]; then
                 npm install --global auspice
                 npm install react
                 npm install styled-components
+                npm install kill-port
                 curl -fsSL --proto '=https' https://nextstrain.org/cli/installer/mac | bash
                 eval "$(micromamba shell hook --shell bash)"
                 micromamba activate

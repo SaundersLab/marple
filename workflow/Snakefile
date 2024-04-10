@@ -299,8 +299,11 @@ rule convert_metaxls:
         """
         ssconvert {input.metadata} {output.metadata}
         sed -i-e 's!tree_new_name!strain!g' {output.metadata}
+        sed -i-e 's!nextstrain_group!group!g' {output.metadata}
         sed -i-e 's!\"!!g' {output.metadata}
-        rm {output.metadata}-e*
+        awk -F',' -v OFS=',' '{{sub(/ [^,]*|:[^,]*/, "", $2); a[$2]++; if(a[$2] > 1) {{$2 = $2"-2"}} print}}' {output.metadata} > {output.metadata}tmp
+        mv {output.metadata}tmp {output.metadata}
+        rm {output.metadata}-e
         """
 
 rule rename_tree:
@@ -317,14 +320,11 @@ rule rename_tree:
         cp {input.treefna} {output.mvfna}tmp
         cp {input.treenwk} {output.mvnwk}tmp
         while IFS=, read -r old_name new_name _; do
-            new=$new_name|cut -d':' -f1
             if grep -Fq $old_name {input.treefna}; then
-                echo 'renaming $old_name to $new_name in {input.treefna}'
-                sed -i "s!$old_name!$(echo $new_name | cut -d':' -f1)!" {output.mvfna}tmp
+                sed -i "s!$old_name!$new_name!" {output.mvfna}tmp
             fi
             if grep -Fq "$old_name" {input.treenwk}; then
-                echo 'renaming $old_name to $new_name in {input.treenwk}'
-                sed -i "s!$old_name!$(echo $new_name | cut -d':' -f1)!" {output.mvnwk}tmp
+                sed -i "s!$old_name!$new_name!" {output.mvnwk}tmp
             fi
         done < {input.metadata} > {log}
         mv {output.mvfna}tmp {output.mvfna}
