@@ -1,20 +1,7 @@
 #!/bin/bash
-# last update: 10/04/2024
+# last update: 12/04/2024
 
-run_cmd="nohup snakemake --quiet --cores all --rerun-incomplete"
-
-while [[ "$#" -gt 0 ]]; do
-    case $1 in
-        --dev)
-            run_cmd="/bin/bash; conda activate marple-env"
-            shift
-            ;;
-        *)
-            echo "Unknown parameter: $1"
-            exit 1
-            ;;
-    esac
-done
+run_cmd="nohup snakemake --cores all --rerun-incomplete"
 
 if command -v mamba &> /dev/null; then
     if mamba env list | grep -q marple-env; then
