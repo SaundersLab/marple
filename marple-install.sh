@@ -1,5 +1,5 @@
 #!/bin/bash
-# last update: 10/04/2024
+# last update: 16/05/2024
 
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
         wd=/home/$USER/marple
@@ -40,11 +40,11 @@ elif [[ $(grep transfer-pgt "$bashf") ]]; then
         case $yn in
         [Yy]* )
         mkdir -p .marple-tmp
-        sed -i-e '/function marple() {/,/export -f marple-tree/d' "$bashf";
+        sed -i -e '/function marple() {/,/export -f marple-tree/d' "$bashf"
         mv "$bashf"-e .marple-tmp/bashrc.bak
-        echo -e "$marple_func" >> "$bashf";
-        echo -e "$transfer_pst_func" >> "$bashf";
-        echo -e "$transfer_pgt_func" >> "$bashf";
+        echo -e "$marple_func" >> "$bashf"
+        echo -e "$transfer_pst_func" >> "$bashf"
+        echo -e "$transfer_pgt_func" >> "$bashf"
         echo -e "$auspice_func" >> "$bashf"
         echo -e '\nexport -f marple' >> "$bashf"
         echo -e 'export -f transfer-pst' >> "$bashf"
@@ -59,6 +59,27 @@ fi
 
 pckg="python=3.10 augur snakemake bwa star samtools nanoq fastqc gffread multiqc fasttree openpyxl matplotlib biopython"
 
+update_software() {
+    if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+        sudo apt-get install bzip2
+        sudo apt-get install gnumeric
+        sudo apt install npm
+        sudo npm install --global auspice
+        sudo npm install react
+        sudo npm install styled-components
+        sudo npm install kill-port
+    elif [[ "$OSTYPE" == "darwin"* ]]; then
+        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+        brew install bzip2
+        brew install gnumeric
+        brew install npm
+        npm install --global auspice
+        npm install react
+        npm install styled-components
+        npm install kill-port
+    fi
+}
+
 if command -v mamba &> /dev/null; then
         if mamba env list | grep -q marple-env; then
                 while true; do
@@ -68,73 +89,19 @@ if command -v mamba &> /dev/null; then
                 mamba env remove -n marple-env -y -q
                 mamba create -n marple-env -y -c bioconda -c conda-forge $pckg
                 break;;
-                [Nn]* ) while true; do
-                read -p "Do you want to update the softwares used in MARPLE? " yn
-                case $yn in
-                [Yy]* ) 
-                if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-                sudo apt-get install bzip2
-                sudo apt-get install gnumeric
-                sudo apt install npm
-                sudo npm install --global auspice
-                sudo npm install react
-                sudo npm install styled-components
-                sudo npm install kill-port
-                elif [[ "$OSTYPE" == "darwin"* ]]; then
-                /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-                brew install bzip2
-                brew install gnumeric
-                brew install npm
-                npm install --global auspice
-                npm install react
-                npm install styled-components
-                npm install kill-port
-                fi 
-                break;;
                 [Nn]* ) break;;
-                * ) echo "Please select an option [Yn] ";;
-                esac
-                done
-                break;;
                 * ) echo "Please select an option [Yn] ";;
                 esac
                 done
         else
                 mamba create -n marple-env -y -c bioconda -c conda-forge $pckg
-        fi
-elif [[ "$OSTYPE" == "linux-gnu"* || "$OSTYPE" == "darwin"* ]]; then
-        if [[ "$OSTYPE" == "linux-gnu"* ]] && [[ ! -d ~/micromamba ]]; then
-                sudo apt-get install bzip2
-                sudo apt-get install gnumeric
-                sudo apt install npm
-                sudo npm install --global auspice
-                sudo npm install react
-                sudo npm install styled-components
-                sudo npm install kill-port
-                wget -qO- https://micromamba.snakepit.net/api/micromamba/linux-64/latest | tar -xvj bin/micromamba
-                ./bin/micromamba shell init -s bash -p ~/micromamba
-                source "$bashf"
-                sleep 1
-                micromamba create -n base -c conda-forge -y
-                micromamba activate base
-        elif [[ "$OSTYPE" == "darwin"* ]] && ! command -v micromamba &> /dev/null; then
-                /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-                brew install bzip2
-                brew install micromamba
-                brew install gnumeric
-                brew install npm
-                npm install --global auspice
-                npm install react
-                npm install styled-components
-                npm install kill-port
-                curl -fsSL --proto '=https' https://nextstrain.org/cli/installer/mac | bash
-                eval "$(micromamba shell hook --shell bash)"
-                micromamba activate
-        fi
-        micromamba install mamba -c conda-forge -y
-        mamba create -n marple-env -y -c bioconda -c conda-forge $pckg
-        mamba init
-else
-        echo "Unsupported operating system"
-        exit 1
 fi
+
+while true; do
+    read -p "Do you want to update the softwares used in MARPLE? " yn
+    case $yn in
+    [Yy]* ) update_software; break;;
+    [Nn]* ) break;;
+    * ) echo "Please select an option [Yn] ";;
+    esac
+done
