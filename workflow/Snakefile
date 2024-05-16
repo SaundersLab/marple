@@ -38,11 +38,13 @@ def primer_performance_summaries(wildcards):
 rule create_sample_multiqc_row:
     input:
         tree_input="results/{organism}/{sample}/tree_input/{sample}.ffn",
-        primer_performance_summaries=primer_performance_summaries
+        primer_performance_summaries=primer_performance_summaries,
+        consensus="results/{organism}/{sample}/aligned/{sample}.fna",
+        metadata="resources/{organism}/{organism}_fungicide_metadata.xlsx"
     output: 
-        multiqc_row="results/{organism}/{sample}/multiqc_row/{sample}_multiqc_row.csv"
+        multiqc_row="results/{organism}/{sample}/multiqc_row/{sample}_multiqc_row.csv",
+        multiqc_fung="results/{organism}/{sample}/multiqc_row/{sample}_multiqc_fung_table.csv"
     log: "logs/{organism}/{sample}/create_sample_multiqc_row_{sample}.log"
-    conda: "envs/visualise_tree.yml"
     script: "scripts/create_sample_multiqc_row.py"
 
 rule summarise_primer_performance:
@@ -51,7 +53,6 @@ rule summarise_primer_performance:
     output:
         primer_performance_summary="results/{organism}/{sample}/primer_performance/{sample}_primer_performance_by_{groupby}.csv"
     log: "logs/{organism}/{sample}/summarise_primer_performance_by_{groupby}_{sample}.log"
-    conda: "envs/visualise_tree.yml"
     script: "scripts/summarise_primer_performance.py" 
 
 rule cumulative_amplicon_coverage:
@@ -60,7 +61,6 @@ rule cumulative_amplicon_coverage:
     output:
         cumulative_amplicon_coverage="results/{organism}/{sample}/primer_performance/{sample}_cumulative_amplicon_coverage.csv"
     log: "logs/{organism}/{sample}/cumulative_amplicon_coverage_{sample}.log"
-    conda: "envs/visualise_tree.yml"
     script: "scripts/cumulative_amplicon_coverage.py"
 
 # This is a work around to ensure that multiqc can create the plot specified in
@@ -88,7 +88,6 @@ rule summarise_snps:
     output:
         snp_counts="results/{organism}/report/snp_summary.csv"
     log: "logs/{organism}/summarise_snps.log"
-    conda: "envs/visualise_tree.yml"
     script: "scripts/summarise_snps_by_gene.py"
 
 rule primer_performance:
@@ -99,7 +98,6 @@ rule primer_performance:
     output:
         primer_performance="results/{organism}/{sample}/primer_performance/{sample}_primer_performance.csv"
     log: "logs/{organism}/{sample}/primer_performance_{sample}.log"
-    conda: "envs/visualise_tree.yml"
     script: "scripts/primer_performance.py"
 
 rule bwa_index:
@@ -109,7 +107,6 @@ rule bwa_index:
             "resources/{organism}/reference/{organism}.fna",
             *bwa_index_extensions
         )
-    conda: "envs/bwa_samtools.yml"
     log: "logs/{organism}/bwa_index.log"
     shell:"bwa index {input} >{log} 2>&1"
 
@@ -122,7 +119,6 @@ rule bwa_mem:
         ),
         fastq="results/{organism}/{sample}/filtered_reads/{sample}.fastq.gz",
     output: "results/{organism}/{sample}/aligned/{sample}.bam"
-    conda: "envs/bwa_samtools.yml"
     log: "logs/{organism}/{sample}/bwa_mem_{sample}.log"
     threads: config["bwa_mem_threads"]
     shell: """
@@ -135,14 +131,12 @@ rule samtools_index:
     input: "resources/{organism}/reference/{organism}.fna"
     output: "resources/{organism}/reference/{organism}.fna.fai"
     log: "logs/{organism}/samtools_index.log"
-    conda: "envs/bwa_samtools.yml"
     shell: "samtools faidx {input} >{output} 2>{log}"
 
 rule filter_reads:
     input: "reads/{organism}/{sample}.fastq.gz"
     output: "results/{organism}/{sample}/filtered_reads/{sample}.fastq.gz"
     log: "logs/{organism}/{sample}/filter_reads_{sample}.log"
-    conda: "envs/nanoq.yml"
     shell: """
         nanoq \
             -m {config[maximum_read_length]} \
@@ -158,7 +152,6 @@ rule fastqc:
         html="results/{organism}/{sample}/fastqc/{sample}_fastqc.html",
         data="results/{organism}/{sample}/fastqc/{sample}_fastqc.zip",
     log: "logs/{organism}/{sample}/fastqc_{sample}.log"
-    conda: "envs/fastqc.yml"
     shell: "fastqc -o $(dirname {output.html}) {input} >{log} 2>&1"
 
 use rule fastqc as fastqc_filtered_reads with:
@@ -172,7 +165,6 @@ rule flagstat:
     input: "results/{organism}/{sample}/aligned/{sample}.bam"
     output: "results/{organism}/{sample}/flagstat/{sample}.txt"
     log: "logs/{organism}/{sample}/flagstat_{sample}.log"
-    conda: "envs/bwa_samtools.yml"
     shell: "samtools flagstat {input} >{output} 2>{log}"
 
 def multiqc_input(wildcards):
@@ -198,6 +190,10 @@ def multiqc_input(wildcards):
         for sample in samples[organism]
     ]
     files += [
+        f"results/{organism}/{sample}/multiqc_row/{sample}_multiqc_fung_table.csv"
+        for sample in samples[organism]
+    ]
+    files += [
         f"results/{organism}/report/snp_summary.csv"
     ]
     return files
@@ -206,7 +202,6 @@ rule multiqc:
     input: multiqc_input
     output: "results/{organism}/report/{organism}.multiqc.html",
     log: "logs/{organism}/multiqc_{organism}.log",
-    conda: "envs/multiqc.yml"
     shell: """
         tempdir=$(mktemp -d)
         cp {input} $tempdir
@@ -221,7 +216,6 @@ rule pileup:
         bam="results/{organism}/{sample}/aligned/{sample}.bam",
     output: "results/{organism}/{sample}/aligned/{sample}.pileup.gz"
     log: "logs/{organism}/{sample}/pileup_{sample}.log"
-    conda: "envs/bwa_samtools.yml"
     shell: "(samtools mpileup -f {input.ref} {input.bam} | gzip -c > {output}) >{log} 2>&1"
 
 rule consensus:
@@ -232,7 +226,6 @@ rule consensus:
         consensus="results/{organism}/{sample}/aligned/{sample}.fna",
         snps="results/{organism}/{sample}/snps/{sample}.tsv"
     log: "logs/{organism}/{sample}/consensus_{sample}.log"
-    conda: "envs/biopython_pandas.yml"
     script: "scripts/pileup_to_consensus.py"
 
 rule extract_cds:
@@ -241,7 +234,6 @@ rule extract_cds:
         gff="resources/{organism}/reference/{organism}.gff",
     output: "results/{organism}/{sample}/aligned/{sample}.ffn"
     log: "logs/{organism}/{sample}/extract_cds_{sample}.log"
-    conda: "envs/gffread.yml"
     shell: "gffread -x {output} -g {input.consensus} {input.gff} >{log} 2>&1"
 
 rule flatten:
@@ -286,7 +278,6 @@ rule visualise_tree:
         metadata="resources/{organism}/{organism}_sample_metadata.xlsx"
     output: "results/{organism}/trees/{organism}_{existing_samples}.pdf"
     log: "logs/{organism}/trees/visualise_tree_{existing_samples}.log"
-    conda: "envs/visualise_tree.yml"
     script: "scripts/visualise_tree.py"
 
 rule convert_metaxls:
