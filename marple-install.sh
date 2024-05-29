@@ -57,7 +57,7 @@ elif [[ $(grep transfer-pgt "$bashf") ]]; then
         done
 fi
 
-pckg="python=3.10 augur snakemake bwa star samtools nanoq fastqc gffread multiqc fasttree openpyxl matplotlib biopython"
+pckg="python=3.10 augur snakemake bwa star samtools nanoq fastqc gffread multiqc fasttree openpyxl matplotlib biopython clustalw pandas"
 
 update_software() {
     if [[ "$OSTYPE" == "linux-gnu"* ]]; then
