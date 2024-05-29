@@ -74,8 +74,8 @@ try:
     for idx, row in metadata_df.iterrows():
         gene = row['Gene']
         ref_org = row['Ref. Organism']
-        old_aa = row['Old amino acid']
-        new_aa = row['New amino acid']
+        old_aa = row['WT amino acid']
+        new_aa = row['MUT amino acid']
         aa_pos = int(row['Ref. aa position'])
         
         for geneID, sequence in sequences.items():
