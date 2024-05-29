@@ -95,7 +95,7 @@ try:
                     elif aligned_aa_seq[aa_pos-1] in new_aa:
                         new_aa = aligned_aa_seq[aa_pos-1]
                         
-                        row['New amino acid'] = new_aa
+                        row['MUT amino acid'] = new_aa
                         
                         # Get the unaligned position for the P[g/s]t amino acid position
                         unaligned_pos = 0
