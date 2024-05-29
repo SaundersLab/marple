@@ -1,5 +1,5 @@
-import glob
 import os
+import glob
 
 configfile: "config/config.yml"
 
@@ -40,7 +40,8 @@ rule create_sample_multiqc_row:
         tree_input="results/{organism}/{sample}/tree_input/{sample}.ffn",
         primer_performance_summaries=primer_performance_summaries,
         consensus="results/{organism}/{sample}/aligned/{sample}.fna",
-        metadata="resources/{organism}/{organism}_fungicide_metadata.xlsx"
+        metadata="resources/fungicide_metadata.xlsx",
+        reference="resources/{organism}/reference/{organism}.fna"
     output: 
         multiqc_row="results/{organism}/{sample}/multiqc_row/{sample}_multiqc_row.csv",
         multiqc_fung="results/{organism}/{sample}/multiqc_row/{sample}_multiqc_fung_table.csv"
@@ -89,6 +90,27 @@ rule summarise_snps:
         snp_counts="results/{organism}/report/snp_summary.csv"
     log: "logs/{organism}/summarise_snps.log"
     script: "scripts/summarise_snps_by_gene.py"
+
+def fungicide_files(wildcards):
+    organism = wildcards.organism
+    files = [
+        f"results/{organism}/{sample}/multiqc_row/{sample}_multiqc_fung_table.csv"
+        for sample in samples[organism]
+    ]
+    return files
+
+rule summarise_saps:
+    input: fungicide_files
+    output:"results/{organism}/report/sap_summary.csv"
+    log: "logs/{organism}/summarise_saps.log"
+    shell: """ python -c "
+import pandas as pd
+files = sorted('{input}'.split())
+df_list = [pd.read_csv(f) for f in files if len(open(f,'r').readlines())>1]
+df_final = pd.concat(df_list, axis=0, ignore_index=True, sort=False)
+df_final.to_csv('{output}', index=True, index_label='index')
+" 2> {log}
+    """
 
 rule primer_performance:
     input:
@@ -190,8 +212,7 @@ def multiqc_input(wildcards):
         for sample in samples[organism]
     ]
     files += [
-        f"results/{organism}/{sample}/multiqc_row/{sample}_multiqc_fung_table.csv"
-        for sample in samples[organism]
+        f"results/{organism}/report/sap_summary.csv"
     ]
     files += [
         f"results/{organism}/report/snp_summary.csv"
@@ -221,7 +242,7 @@ rule pileup:
 rule consensus:
     input:
         pileup="results/{organism}/{sample}/aligned/{sample}.pileup.gz",
-        ref="resources/{organism}/reference/{organism}.fna",
+        ref="resources/{organism}/reference/{organism}.fna"
     output: 
         consensus="results/{organism}/{sample}/aligned/{sample}.fna",
         snps="results/{organism}/{sample}/snps/{sample}.tsv"
