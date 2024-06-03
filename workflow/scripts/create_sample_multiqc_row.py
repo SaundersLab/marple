@@ -107,7 +107,7 @@ for gene, org in ref_sequences:
                                 })
                                 raise StopIteration
                         except StopIteration:
-                            continue
+                            pass
                         
                         if aligned_aa_seq[item['meta_aapos']-1] in item['meta_newaa']:
                             new_aa = aligned_aa_seq[item['meta_aapos']-1]
