@@ -41,7 +41,8 @@ rule create_sample_multiqc_row:
         primer_performance_summaries=primer_performance_summaries,
         consensus="results/{organism}/{sample}/aligned/{sample}.fna",
         metadata="resources/fungicide_metadata.xlsx",
-        reference="resources/{organism}/reference/{organism}.fna"
+        reference="resources/{organism}/reference/{organism}.fna",
+        complete_seq="results/{organism}/{sample}/aligned/{sample}_complete.fasta"
     output: 
         multiqc_row="results/{organism}/{sample}/multiqc_row/{sample}_multiqc_row.csv",
         multiqc_fung="results/{organism}/{sample}/multiqc_row/{sample}_multiqc_fung_table.csv"
@@ -242,10 +243,11 @@ rule pileup:
 rule consensus:
     input:
         pileup="results/{organism}/{sample}/aligned/{sample}.pileup.gz",
-        ref="resources/{organism}/reference/{organism}.fna"
+        ref="resources/{organism}/reference/{organism}.fna",
     output: 
         consensus="results/{organism}/{sample}/aligned/{sample}.fna",
-        snps="results/{organism}/{sample}/snps/{sample}.tsv"
+        snps="results/{organism}/{sample}/snps/{sample}.tsv",
+        complete_seq="results/{organism}/{sample}/aligned/{sample}_complete.fasta"
     log: "logs/{organism}/{sample}/consensus_{sample}.log"
     script: "scripts/pileup_to_consensus.py"
 
