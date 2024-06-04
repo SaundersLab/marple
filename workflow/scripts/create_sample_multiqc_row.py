@@ -21,6 +21,15 @@ def align_seqs(refseq, qseq, both=True):
 def load_data(file_path, sheet_name=None):
     return pd.read_excel(file_path, sheet_name=sheet_name) if sheet_name else pd.read_csv(file_path)
 
+def alignment_mapping(aligned_seq):
+    alignment_map = {}
+    unaligned_pos = 0
+    for aligned_pos, aa in enumerate(aligned_seq):
+        if aa != '-':
+            unaligned_pos += 1
+        alignment_map[aligned_pos] = unaligned_pos
+    return alignment_map
+
 tree_input_seq = next(str(r.seq) for r in SeqIO.parse(str(snakemake.input.tree_input), 'fasta'))
 pct_tree_bases = 100 * (1 - tree_input_seq.count('N') / len(tree_input_seq))
 
@@ -52,6 +61,9 @@ for gene, org in ref_sequences:
                 if gene == geneID:
                     aa_seq = nt_to_aa(sequence)
                     aligned_aa_seq, aligned_ref_aa_seq = align_seqs(aa_refseq, aa_seq)
+
+                    ref_alignment_map = alignment_mapping(aligned_ref_aa_seq)
+                    sample_alignment_map = alignment_mapping(aligned_aa_seq)
                     
                     if all(aa == 'X' for aa in aa_seq):
                         new_row = {'Sample Name': str(snakemake.wildcards.sample), 'Gene': gene, 'Organism': snakemake.wildcards.organism.title(), 'Notes': 'Did not amplify'}
@@ -59,14 +71,17 @@ for gene, org in ref_sequences:
                             matching_rows.append(new_row)
                         continue
 
-                    if aligned_aa_seq[item['Ref. aa position']-1] in item['MUT amino acid'] and aligned_ref_aa_seq[item['Ref. aa position']-1] != '-':
-                        new_aa = aligned_aa_seq[item['Ref. aa position']-1]
-                        unaligned_pos = sum(1 for i in range(item['Ref. aa position']) if aligned_aa_seq[i] != '-')
+                    ref_pos = item['Ref. aa position'] - 1
+                    aligned_ref_pos = next((pos for pos, unaligned_pos in ref_alignment_map.items() if unaligned_pos == ref_pos + 1), None)
+                    
+                    if aligned_ref_pos is not None and aligned_aa_seq[aligned_ref_pos] in item['MUT amino acid'] and aligned_ref_aa_seq[aligned_ref_pos] != '-':
+                        new_aa = aligned_aa_seq[aligned_ref_pos]
+                        unaligned_sample_pos = sample_alignment_map[aligned_ref_pos]
                         new_row = {
                             'Sample Name': str(snakemake.wildcards.sample), 'Gene': gene, 'Ref.Pst aa position': item['Ref.Pst aa position'], 
                             'WT amino acid': item['WT amino acid'], 'MUT amino acid': new_aa, 'Mutation type': 'Non-synonymous',
                             'Ref. Organism': org, 'Ref. aa position': item['Ref. aa position'], 
-                            f'{snakemake.wildcards.organism.title()} amino acid position': unaligned_pos, 'Reference': item['Reference'],
+                            f'{snakemake.wildcards.organism.title()} amino acid position': unaligned_sample_pos, 'Reference': item['Reference'],
                             'Organism': snakemake.wildcards.organism.title()
                         }
                         if new_row not in matching_rows:
@@ -74,13 +89,16 @@ for gene, org in ref_sequences:
 
 ref_seq = next(str(record.seq) for record in SeqIO.parse(str(snakemake.input.reference), 'fasta') if record.id == gene)
 aa_ref_seq = nt_to_aa(ref_seq)
-# Note: i'm switching the query/ref here, so the aligned_aa_seq is now the ref
+# Note: I'm switching the query/ref here, so the aligned_aa_seq is now the ref
 aligned_ref_aa_seq, aligned_aa_seq = align_seqs(aligned_aa_seq, aa_ref_seq)
+
+ref_alignment_map = alignment_mapping(aligned_ref_aa_seq)
+sample_alignment_map = alignment_mapping(aligned_aa_seq)
 
 for i, (ref_aa, seq_aa) in enumerate(zip(aligned_ref_aa_seq, aligned_aa_seq), start=1):
     if (ref_aa != seq_aa) and seq_aa != 'X':
-        unaligned_ref_pos = sum(1 for j in range(i) if aligned_ref_aa_seq[j] != '-')
-        unaligned_pos = sum(1 for j in range(i) if aligned_aa_seq[j] != '-')
+        unaligned_ref_pos = ref_alignment_map[i - 1]
+        unaligned_pos = sample_alignment_map[i - 1]
         matching_rows.append({
             'Sample Name': str(snakemake.wildcards.sample), 'Gene': gene, 'WT amino acid': ref_aa, 'MUT amino acid': seq_aa, 
             'Mutation type': 'Non-synonymous', 'Ref. Organism': f'{snakemake.wildcards.organism.title()}', 'Ref. aa position': unaligned_ref_pos,
