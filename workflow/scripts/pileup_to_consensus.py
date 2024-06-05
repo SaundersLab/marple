@@ -81,7 +81,7 @@ def pileup_row_to_consensus(
     min_snp_depth: int = 10,
     hetero_min: float = .2,
     hetero_max: float = .8,
-) -> Tuple[str, int, str, str]:
+) -> Tuple[str, int, str]:
     alleles_to_code = {
         'A': 'A',  'C': 'C',  'G': 'G',  'T': 'T',
         'AT': 'W',  'CG': 'S',  'AC': 'M',  'GT': 'K',  'AG': 'R',  'CT': 'Y',
@@ -91,13 +91,12 @@ def pileup_row_to_consensus(
     depth = int(depth_str)
     pos = int(pos_str)
     ref = ref.upper()
-    # Need to check if the base returned is identical to the reference and if that causes any issues with the final consensus
-    null_consensus = contig, pos - 1, 'N', ref
+    null_consensus = contig, pos - 1, 'N'
     if depth < min_ref_depth:
         return null_consensus
     base_ratios = base_ratios_from_reads(ref, depth, reads)
     if list(base_ratios) == [ref]:
-        return contig, pos - 1, ref, ref
+        return contig, pos - 1, ref
     if depth < min_snp_depth:
         return null_consensus
     genotype, valid_base_ratios = get_genotype_and_valid_base_ratios(
@@ -108,53 +107,39 @@ def pileup_row_to_consensus(
     
     alleles = ''.join(valid_base_ratios)
     
+    # write the SNP to a file
     if snp_file_handle is not None:
         ratios = ','.join(map(lambda v: str(round(v, 3)), base_ratios.values()))
         snp_row = (contig, pos - 1, ref, depth, alleles, ratios, genotype)
         snp_file_handle.write('\t'.join(map(str, snp_row)) + '\n')
 
-    # Return the base with the highest ratio for ambiguous bases
     if genotype == '?':
-        # Get the base with the highest ratio
-        max_ratio_base = max(valid_base_ratios, key=valid_base_ratios.get)
-        return contig, pos - 1, max_ratio_base, ref
+        return null_consensus
+    
+    return contig, pos - 1, alleles_to_code[alleles]
 
-    return contig, pos - 1, alleles_to_code[alleles], ref
 
 def pileup_to_consensus(
     pileup_path: str,
     ref_path: str,
     out_path: str = None,
     snp_file_path: str = None,
-    complete_seq_path: str = None,
     **kwargs,
 ) -> Dict[str, List[str]]:
 
-    # Start with an empty consensus and complete sequence
+    # Start with an empty consensus
     consensus = {r.id: ['N'] * len(r.seq) for r in parse(ref_path, 'fasta')}
-    complete_sequence = {r.id: ['N'] * len(r.seq) for r in parse(ref_path, 'fasta')}
-
     with file(pileup_path) as f_in, file(snp_file_path, 'wt') as f_out:
         f_out.write('seqid\tpos\tref\tdepth\talleles\tratios\tgenotype\n')
         for row in f_in:
-            contig, pos, consensus_base, complete_base = pileup_row_to_consensus(
+            contig, pos, consensus[contig][pos] = pileup_row_to_consensus(
                 row=row, snp_file_handle=f_out, **kwargs
             )
-            consensus[contig][pos] = consensus_base
-            complete_sequence[contig][pos] = complete_base
 
-    # Write the consensus to a file
     with file(out_path, 'wt') as f:
         for contig in sorted(consensus):
             codes = consensus[contig]
             f.write('>' + contig + '\n' + ''.join(codes) + '\n')
-
-    # Write the complete sequence to a new file
-    with file(complete_seq_path, 'wt') as f:
-        for contig in sorted(complete_sequence):
-            codes = complete_sequence[contig]
-            f.write('>' + contig + '\n' + ''.join(codes) + '\n')
-
     return consensus
 
 if __name__ == '__main__':
@@ -163,7 +148,6 @@ if __name__ == '__main__':
         ref_path=str(snakemake.input.ref),
         out_path=str(snakemake.output.consensus),
         snp_file_path=str(snakemake.output.snps),
-        complete_seq_path=str(snakemake.output.complete_seq),
         min_ref_depth=int(snakemake.config['min_ref_depth']),
         min_snp_depth=int(snakemake.config['min_snp_depth']),
         hetero_min=float(snakemake.config['hetero_min']),

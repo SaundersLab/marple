@@ -146,7 +146,8 @@ rule bwa_mem:
     threads: config["bwa_mem_threads"]
     shell: """
     (
-        bwa mem -t {threads} {input.ref} {input.fastq} | samtools sort > {output}
+        bwa mem -t {threads} {input.ref} {input.fastq} | samtools sort > {output};
+        samtools index {output}
     ) >{log} 2>&1
     """
 
@@ -240,14 +241,23 @@ rule pileup:
     log: "logs/{organism}/{sample}/pileup_{sample}.log"
     shell: "(samtools mpileup -f {input.ref} {input.bam} | gzip -c > {output}) >{log} 2>&1"
 
+rule complete_sequence:
+    input:
+        bam="results/{organism}/{sample}/aligned/{sample}.bam",
+        ref="resources/{organism}/reference/{organism}.fna",
+        index="resources/{organism}/reference/{organism}.fna.fai"
+    output:
+        complete_seq="results/{organism}/{sample}/aligned/{sample}_complete.fasta"
+    log: "logs/{organism}/{sample}/complete_seq_{sample}.log"
+    script: "scripts/get_complete_sequence.py"
+
 rule consensus:
     input:
         pileup="results/{organism}/{sample}/aligned/{sample}.pileup.gz",
         ref="resources/{organism}/reference/{organism}.fna",
     output: 
         consensus="results/{organism}/{sample}/aligned/{sample}.fna",
-        snps="results/{organism}/{sample}/snps/{sample}.tsv",
-        complete_seq="results/{organism}/{sample}/aligned/{sample}_complete.fasta"
+        snps="results/{organism}/{sample}/snps/{sample}.tsv"
     log: "logs/{organism}/{sample}/consensus_{sample}.log"
     script: "scripts/pileup_to_consensus.py"
 

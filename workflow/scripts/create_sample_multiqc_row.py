@@ -13,7 +13,7 @@ def align_seqs(refseq, qseq, both=True):
         temp_input.write(f">ref\n{refseq}\n>query\n{qseq}\n")
         temp_input.flush()
         temp_output_name = temp_input.name + ".aln"
-        subprocess.run(["clustalw2", "-infile=" + temp_input.name, "-outfile=" + temp_output_name, "-output=fasta", "-type=Protein"], check=True)
+        subprocess.run(["clustalw2", "-infile=" + temp_input.name, "-outfile=" + temp_output_name, "-output=fasta", "-type=Protein", '-quiet=stdout'], check=True)
     
     sequences = {record.id: str(record.seq) for record in SeqIO.parse(temp_output_name, 'fasta')}
     return (sequences['query'], sequences['ref']) if both else sequences['query']
@@ -69,7 +69,7 @@ for gene, org in ref_sequences:
                         new_row = {'Sample Name': str(snakemake.wildcards.sample), 'Gene': gene, 'Organism': snakemake.wildcards.organism.title(), 'Notes': 'Did not amplify'}
                         if new_row not in matching_rows:
                             matching_rows.append(new_row)
-                        continue
+                        break
 
                     ref_pos = item['Ref. aa position'] - 1
                     aligned_ref_pos = next((pos for pos, unaligned_pos in ref_alignment_map.items() if unaligned_pos == ref_pos + 1), None)
@@ -87,23 +87,27 @@ for gene, org in ref_sequences:
                         if new_row not in matching_rows:
                             matching_rows.append(new_row)
 
-ref_seq = next(str(record.seq) for record in SeqIO.parse(str(snakemake.input.reference), 'fasta') if record.id == gene)
-aa_ref_seq = nt_to_aa(ref_seq)
-# Note: I'm switching the query/ref here, so the aligned_aa_seq is now the ref
-aligned_ref_aa_seq, aligned_aa_seq = align_seqs(aligned_aa_seq, aa_ref_seq)
+    # Can also check against the consensus sequence of the P[g/s]t reference, but initial tests showed great differences between the complete sequence and the references, so might be better to leave out
+    
+    # ref_seq = next(str(record.seq) for record in SeqIO.parse(str(snakemake.input.reference), 'fasta') if record.id == gene)
+    # aa_ref_seq = nt_to_aa(ref_seq)
+    # aa_seq = nt_to_aa(sequences[gene])
+    # aligned_aa_seq, aligned_ref_aa_seq = align_seqs(aa_ref_seq, aa_seq)
 
-ref_alignment_map = alignment_mapping(aligned_ref_aa_seq)
-sample_alignment_map = alignment_mapping(aligned_aa_seq)
+    # ref_alignment_map = alignment_mapping(aligned_ref_aa_seq)
+    # sample_alignment_map = alignment_mapping(aligned_aa_seq)
 
-for i, (ref_aa, seq_aa) in enumerate(zip(aligned_ref_aa_seq, aligned_aa_seq), start=1):
-    if (ref_aa != seq_aa) and seq_aa != 'X':
-        unaligned_ref_pos = ref_alignment_map[i - 1]
-        unaligned_pos = sample_alignment_map[i - 1]
-        matching_rows.append({
-            'Sample Name': str(snakemake.wildcards.sample), 'Gene': gene, 'WT amino acid': ref_aa, 'MUT amino acid': seq_aa, 
-            'Mutation type': 'Non-synonymous', 'Ref. Organism': f'{snakemake.wildcards.organism.title()}', 'Ref. aa position': unaligned_ref_pos,
-            f'{snakemake.wildcards.organism.title()} amino acid position': unaligned_pos, 'Reference': 'N/A', 
-            'Organism': snakemake.wildcards.organism.title()
-        })
+    # for i, (ref_aa, seq_aa) in enumerate(zip(aligned_ref_aa_seq, aligned_aa_seq), start=1):
+    #     if (ref_aa != seq_aa) and seq_aa != 'X': # we're also doing insertions/deletions
+    #         unaligned_ref_pos = ref_alignment_map[i - 1]
+    #         unaligned_pos = sample_alignment_map[i - 1]
+    #         new_row = {
+    #             'Sample Name': str(snakemake.wildcards.sample), 'Gene': gene, 'WT amino acid': ref_aa, 'MUT amino acid': seq_aa, 
+    #             'Mutation type': 'Non-synonymous', 'Ref. Organism': f'{snakemake.wildcards.organism.title()}', 'Ref. aa position': unaligned_ref_pos,
+    #             f'{snakemake.wildcards.organism.title()} amino acid position': unaligned_pos, 'Reference': 'N/A', 
+    #             'Organism': snakemake.wildcards.organism.title()
+    #         }
+    #         if new_row not in matching_rows:
+    #             matching_rows.append(new_row)
 
 pd.DataFrame(matching_rows).to_csv(snakemake.output.multiqc_fung, index=None)
