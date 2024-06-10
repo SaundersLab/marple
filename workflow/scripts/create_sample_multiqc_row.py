@@ -47,7 +47,7 @@ pd.concat(groupby_summaries, axis=1).to_csv(snakemake.output.multiqc_row, index=
 
 # Adding fungicide resistance genes records to the multiqc report
 
-sequences = {record.id: str(record.seq) for record in SeqIO.parse(str(snakemake.input.complete_seq), 'fasta')}
+sequences = {record.id: str(record.seq) for record in SeqIO.parse(str(snakemake.input.consensus), 'fasta')}
 ref_sequences = {(row['Gene'], row['Organism']): row['Sequence'] for idx, row in load_data(metadata_xls, 'protein_seqs').iterrows()}
 known_mutations = [row.to_dict() for idx, row in load_data(metadata_xls, 'metadata').iterrows()]
 
@@ -86,28 +86,26 @@ for gene, org in ref_sequences:
                         }
                         if new_row not in matching_rows:
                             matching_rows.append(new_row)
+                        
+    ref_seq = next(str(record.seq) for record in SeqIO.parse(str(snakemake.input.reference), 'fasta') if record.id == gene)
+    aa_ref_seq = nt_to_aa(ref_seq)
+    aa_seq = nt_to_aa(sequences[gene])
+    aligned_aa_seq, aligned_ref_aa_seq = align_seqs(aa_ref_seq, aa_seq)
 
-    # Can also check against the consensus sequence of the P[g/s]t reference, but initial tests showed great differences between the complete sequence and the references, so might be better to leave out
-    
-    # ref_seq = next(str(record.seq) for record in SeqIO.parse(str(snakemake.input.reference), 'fasta') if record.id == gene)
-    # aa_ref_seq = nt_to_aa(ref_seq)
-    # aa_seq = nt_to_aa(sequences[gene])
-    # aligned_aa_seq, aligned_ref_aa_seq = align_seqs(aa_ref_seq, aa_seq)
+    ref_alignment_map = alignment_mapping(aligned_ref_aa_seq)
+    sample_alignment_map = alignment_mapping(aligned_aa_seq)
 
-    # ref_alignment_map = alignment_mapping(aligned_ref_aa_seq)
-    # sample_alignment_map = alignment_mapping(aligned_aa_seq)
-
-    # for i, (ref_aa, seq_aa) in enumerate(zip(aligned_ref_aa_seq, aligned_aa_seq), start=1):
-    #     if (ref_aa != seq_aa) and seq_aa != 'X': # we're also doing insertions/deletions
-    #         unaligned_ref_pos = ref_alignment_map[i - 1]
-    #         unaligned_pos = sample_alignment_map[i - 1]
-    #         new_row = {
-    #             'Sample Name': str(snakemake.wildcards.sample), 'Gene': gene, 'WT amino acid': ref_aa, 'MUT amino acid': seq_aa, 
-    #             'Mutation type': 'Non-synonymous', 'Ref. Organism': f'{snakemake.wildcards.organism.title()}', 'Ref. aa position': unaligned_ref_pos,
-    #             f'{snakemake.wildcards.organism.title()} amino acid position': unaligned_pos, 'Reference': 'N/A', 
-    #             'Organism': snakemake.wildcards.organism.title()
-    #         }
-    #         if new_row not in matching_rows:
-    #             matching_rows.append(new_row)
+    for i, (ref_aa, seq_aa) in enumerate(zip(aligned_ref_aa_seq, aligned_aa_seq), start=1):
+        if (ref_aa != seq_aa) and seq_aa != 'X': # we're also doing insertions/deletions
+            unaligned_ref_pos = ref_alignment_map[i - 1]
+            unaligned_pos = sample_alignment_map[i - 1]
+            new_row = {
+                'Sample Name': str(snakemake.wildcards.sample), 'Gene': gene, 'WT amino acid': ref_aa, 'MUT amino acid': seq_aa, 
+                'Mutation type': 'Non-synonymous', 'Ref. Organism': f'{snakemake.wildcards.organism.title()}', 'Ref. aa position': unaligned_ref_pos,
+                f'{snakemake.wildcards.organism.title()} amino acid position': unaligned_pos, 'Reference': 'N/A', 
+                'Organism': snakemake.wildcards.organism.title()
+            }
+            if new_row not in matching_rows:
+                matching_rows.append(new_row)
 
 pd.DataFrame(matching_rows).to_csv(snakemake.output.multiqc_fung, index=None)

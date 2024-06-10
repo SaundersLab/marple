@@ -42,7 +42,6 @@ rule create_sample_multiqc_row:
         consensus="results/{organism}/{sample}/aligned/{sample}.fna",
         metadata="resources/fungicide_metadata.xlsx",
         reference="resources/{organism}/reference/{organism}.fna",
-        complete_seq="results/{organism}/{sample}/aligned/{sample}_complete.fasta"
     output: 
         multiqc_row="results/{organism}/{sample}/multiqc_row/{sample}_multiqc_row.csv",
         multiqc_fung="results/{organism}/{sample}/multiqc_row/{sample}_multiqc_fung_table.csv"
@@ -240,16 +239,6 @@ rule pileup:
     output: "results/{organism}/{sample}/aligned/{sample}.pileup.gz"
     log: "logs/{organism}/{sample}/pileup_{sample}.log"
     shell: "(samtools mpileup -f {input.ref} {input.bam} | gzip -c > {output}) >{log} 2>&1"
-
-rule complete_sequence:
-    input:
-        bam="results/{organism}/{sample}/aligned/{sample}.bam",
-        ref="resources/{organism}/reference/{organism}.fna",
-        index="resources/{organism}/reference/{organism}.fna.fai"
-    output:
-        complete_seq="results/{organism}/{sample}/aligned/{sample}_complete.fasta"
-    log: "logs/{organism}/{sample}/complete_seq_{sample}.log"
-    script: "scripts/get_complete_sequence.py"
 
 rule consensus:
     input:
