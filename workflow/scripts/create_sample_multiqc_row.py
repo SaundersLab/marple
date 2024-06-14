@@ -50,6 +50,7 @@ pd.concat(groupby_summaries, axis=1).to_csv(snakemake.output.multiqc_row, index=
 sequences = {record.id: str(record.seq) for record in SeqIO.parse(str(snakemake.input.consensus), 'fasta')}
 ref_sequences = {(row['Gene'], row['Organism']): row['Sequence'] for idx, row in load_data(metadata_xls, 'protein_seqs').iterrows()}
 known_mutations = [row.to_dict() for idx, row in load_data(metadata_xls, 'metadata').iterrows()]
+variants = [row.to_dict() for idx, row in load_data(metadata_xls, 'variants').iterrows()]
 
 matching_rows = []
 
@@ -79,7 +80,7 @@ for gene, org in ref_sequences:
                         unaligned_sample_pos = sample_alignment_map[aligned_ref_pos]
                         new_row = {
                             'Sample Name': str(snakemake.wildcards.sample), 'Gene': gene, 'Ref.Pst aa position': item['Ref.Pst aa position'], 
-                            'WT amino acid': item['WT amino acid'], 'MUT amino acid': new_aa, 'Mutation type': 'Non-synonymous',
+                            'WT amino acid': item['WT amino acid'], 'MUT amino acid': new_aa,
                             'Ref. Organism': org, 'Ref. aa position': item['Ref. aa position'], 
                             f'{snakemake.wildcards.organism.title()} amino acid position': unaligned_sample_pos, 'Reference': item['Reference'],
                             'Organism': snakemake.wildcards.organism.title()
@@ -99,9 +100,19 @@ for gene, org in ref_sequences:
         if (ref_aa != seq_aa) and seq_aa != 'X': # we're also doing insertions/deletions
             unaligned_ref_pos = ref_alignment_map[i - 1]
             unaligned_pos = sample_alignment_map[i - 1]
+            
+            # Check if the mutation is a different variant of the same gene
+            variant_found = False
+            for item in variants:
+                if item['Gene'] == gene and unaligned_ref_pos == item['Posn'] and \
+                    ((seq_aa == item['Var1']) or (seq_aa == item['Var2']) or (seq_aa == item['Var3'])):
+                    variant_found = True
+            if variant_found:
+                continue
+
             new_row = {
                 'Sample Name': str(snakemake.wildcards.sample), 'Gene': gene, 'WT amino acid': ref_aa, 'MUT amino acid': seq_aa, 
-                'Mutation type': 'Non-synonymous', 'Ref. Organism': f'{snakemake.wildcards.organism.title()}', 'Ref. aa position': unaligned_ref_pos,
+                'Ref. Organism': f'{snakemake.wildcards.organism.title()}', 'Ref. aa position': unaligned_ref_pos,
                 f'{snakemake.wildcards.organism.title()} amino acid position': unaligned_pos, 'Reference': 'N/A', 
                 'Organism': snakemake.wildcards.organism.title()
             }
