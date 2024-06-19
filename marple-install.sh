@@ -1,5 +1,5 @@
 #!/bin/bash
-# last update: 16/05/2024
+# last update: 19/06/2024
 
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
         wd=/home/$USER/marple
@@ -40,8 +40,10 @@ elif [[ $(grep transfer-pgt "$bashf") ]]; then
         case $yn in
         [Yy]* )
         mkdir -p .marple-tmp
-        sed -i -e '/function marple() {/,/export -f marple-tree/d' "$bashf"
-        mv "$bashf"-e .marple-tmp/bashrc.bak
+        sed -i-e '/function marple() {/,/export -f marple-tree/d' "$bashf"
+        if [ -f "$bashf"-e ]; then
+                mv "$bashf"-e .marple-tmp/bashrc.bak
+        fi
         echo -e "$marple_func" >> "$bashf"
         echo -e "$transfer_pst_func" >> "$bashf"
         echo -e "$transfer_pgt_func" >> "$bashf"
@@ -95,6 +97,7 @@ if command -v mamba &> /dev/null; then
                 done
         else
                 mamba create -n marple-env -y -c bioconda -c conda-forge $pckg
+        fi
 fi
 
 while true; do
