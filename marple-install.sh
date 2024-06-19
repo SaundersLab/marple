@@ -98,6 +98,22 @@ if command -v mamba &> /dev/null; then
         else
                 mamba create -n marple-env -y -c bioconda -c conda-forge $pckg
         fi
+else
+        if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+                wget -qO- https://micromamba.snakepit.net/api/micromamba/linux-64/latest | tar -xvj bin/micromamba
+                ./bin/micromamba shell init -s bash -p ~/micromamba
+                source ~/.bashrc
+                sleep 1
+                micromamba create -n base -c conda-forge -y
+                micromamba activate base
+        elif [[ "$OSTYPE" == "darwin"* ]]; then
+                brew install micromamba
+                eval "$(micromamba shell hook --shell bash)"
+                micromamba activate
+        micromamba install mamba -c conda-forge -y
+        mamba create -n marple-env -y -c bioconda -c conda-forge $pckg
+        mamba init
+        fi
 fi
 
 while true; do
