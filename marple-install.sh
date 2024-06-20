@@ -1,5 +1,5 @@
 #!/bin/bash
-# last update: 19/06/2024
+# last update: 20/06/2024
 
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
         wd=/home/$USER/marple
@@ -100,20 +100,22 @@ if command -v mamba &> /dev/null; then
         fi
 else
         if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-                wget -qO- https://micromamba.snakepit.net/api/micromamba/linux-64/latest | tar -xvj bin/micromamba
+                curl -Ls https://micro.mamba.pm/api/micromamba/linux-64/latest | tar -xvj bin/micromamba
                 ./bin/micromamba shell init -s bash -p ~/micromamba
-                source ~/.bashrc
+                eval "$(./bin/micromamba shell hook -s posix)"
                 sleep 1
-                micromamba create -n base -c conda-forge -y
-                micromamba activate base
+                micromamba activate
+                micromamba install mamba -c conda-forge -y
+                mamba create -n marple-env -y -c bioconda -c conda-forge $pckg
         elif [[ "$OSTYPE" == "darwin"* ]]; then
+                /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
                 brew install micromamba
                 eval "$(micromamba shell hook --shell bash)"
                 micromamba activate
-        micromamba install mamba -c conda-forge -y
-        mamba create -n marple-env -y -c bioconda -c conda-forge $pckg
-        mamba init
+                micromamba install mamba -c conda-forge -y
+                mamba create -n marple-env -y -c bioconda -c conda-forge $pckg
         fi
+        mamba init
 fi
 
 while true; do
