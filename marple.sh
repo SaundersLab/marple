@@ -1,7 +1,7 @@
 #!/bin/bash
-# last update: 12/04/2024
+# last update: 09/09/2024
 
-run_cmd="nohup snakemake --cores all --rerun-incomplete"
+run_cmd="nohup snakemake --cores all --rerun-incomplete > snakemake.stdout 2> snakemake.stderr &"
 
 if command -v mamba &> /dev/null; then
     if mamba env list | grep -q marple-env; then
@@ -16,7 +16,7 @@ if command -v mamba &> /dev/null; then
             printf "\r${spin:$i:1}"
             sleep .1
         done 
-        mv nohup.out logs/snakemake.out 
+        mv nohup.out logs/snakemake.out
         exit 0
 	else
 		echo "Environment marple-env not found."

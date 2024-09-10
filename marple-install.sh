@@ -1,5 +1,5 @@
 #!/bin/bash
-# last update: 20/06/2024
+# last update: 09/09/2024
 
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
         wd=/home/$USER/marple
@@ -19,7 +19,6 @@ fi
 marple_func='\nfunction marple() {\npushd ~/marple > /dev/null 2>&1\nmamba activate marple-env \ncat .version.info \nbash marple.sh \nmamba deactivate \npopd > /dev/null 2>&1\n}'
 transfer_pst_func='\nfunction transfer-pgt() {\nexperiment=$1\nshift\nfor arg in "$@";do\nIFS="=" read -r barcode sample<<<"$arg"\nfind /var/lib/minknow/data/* -type d -name "$experiment" 2>/dev/null | xargs -I {} find '{}' -type d -name basecalling | while read dir; do\ncat $dir/pass/"$barcode"/*.fastq.gz > ~/marple/reads/pgt/"$sample".fastq.gz\ndone\ndone\n}'
 transfer_pgt_func='\nfunction transfer-pst() {\nexperiment=$1\nshift\nfor arg in "$@";do\nIFS="=" read -r barcode sample<<<"$arg"\nfind /var/lib/minknow/data/* -type d -name "$experiment" 2>/dev/null | xargs -I {} find '{}' -type d -name basecalling | while read dir; do\ncat $dir/pass/"$barcode"/*.fastq.gz > ~/marple/reads/pst/"$sample".fastq.gz\ndone\ndone\n}'
-auspice_func='\nfunction marple-tree() {\nnpx kill-port 4000 > /dev/null 2>&1\nauspice develop --extend ~/marple/config/auspice/auspiceCustomisations/config.json --datasetDir ~/marple/results/auspice/ > /dev/null 2>&1 & xdg-open http://localhost:4000\n}'
 
 # Create backup of .bashrc and add marple functions
 if [[ ! -d ".marple-tmp" ]] && [[ $(grep -L transfer-pgt "$bashf") ]]; then
@@ -28,11 +27,9 @@ if [[ ! -d ".marple-tmp" ]] && [[ $(grep -L transfer-pgt "$bashf") ]]; then
         echo -e "$marple_func" >> "$bashf"
         echo -e "$transfer_pst_func" >> "$bashf"
         echo -e "$transfer_pgt_func" >> "$bashf"
-        echo -e "$auspice_func" >> "$bashf"
         echo -e '\nexport -f marple' >> "$bashf"
         echo -e 'export -f transfer-pst' >> "$bashf"
         echo -e 'export -f transfer-pgt' >> "$bashf"
-        echo -e 'export -f marple-tree\n' >> "$bashf"
         source "$bashf"
 elif [[ $(grep transfer-pgt "$bashf") ]]; then
         while true; do
@@ -40,18 +37,16 @@ elif [[ $(grep transfer-pgt "$bashf") ]]; then
         case $yn in
         [Yy]* )
         mkdir -p .marple-tmp
-        sed -i-e '/function marple() {/,/export -f marple-tree/d' "$bashf"
+        sed -i-e '/function marple() {/,/export -f transfer-pgt/d' "$bashf"
         if [ -f "$bashf"-e ]; then
                 mv "$bashf"-e .marple-tmp/bashrc.bak
         fi
         echo -e "$marple_func" >> "$bashf"
         echo -e "$transfer_pst_func" >> "$bashf"
         echo -e "$transfer_pgt_func" >> "$bashf"
-        echo -e "$auspice_func" >> "$bashf"
         echo -e '\nexport -f marple' >> "$bashf"
         echo -e 'export -f transfer-pst' >> "$bashf"
         echo -e 'export -f transfer-pgt' >> "$bashf"
-        echo -e 'export -f marple-tree\n' >> "$bashf"
         break;;
         [Nn]* ) break;;
         * ) echo "Please select an option [Yn] ";;
@@ -59,26 +54,15 @@ elif [[ $(grep transfer-pgt "$bashf") ]]; then
         done
 fi
 
-pckg="python=3.10 augur snakemake bwa star samtools nanoq fastqc gffread multiqc fasttree openpyxl matplotlib biopython"
-
 update_software() {
     if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-        sudo apt-get install bzip2
-        sudo apt-get install gnumeric
-        sudo apt install npm
-        sudo npm install --global auspice
-        sudo npm install react
-        sudo npm install styled-components
-        sudo npm install kill-port
+        sudo apt-get install -y bzip2
+        sudo apt-get install -y gnumeric
+        sudo apt-get install -y clustalw
     elif [[ "$OSTYPE" == "darwin"* ]]; then
         /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
         brew install bzip2
         brew install gnumeric
-        brew install npm
-        npm install --global auspice
-        npm install react
-        npm install styled-components
-        npm install kill-port
     fi
 }
 
@@ -89,14 +73,14 @@ if command -v mamba &> /dev/null; then
                 case $yn in
                 [Yy]* )
                 mamba env remove -n marple-env -y -q
-                mamba create -n marple-env -y -c bioconda -c conda-forge $pckg
+                mamba create --force -f config/env.yml
                 break;;
                 [Nn]* ) break;;
                 * ) echo "Please select an option [Yn] ";;
                 esac
                 done
         else
-                mamba create -n marple-env -y -c bioconda -c conda-forge $pckg
+                mamba create --force -f config/env.yml
         fi
 else
         if [[ "$OSTYPE" == "linux-gnu"* ]]; then
@@ -106,23 +90,25 @@ else
                 sleep 1
                 micromamba activate
                 micromamba install mamba -c conda-forge -y
-                mamba create -n marple-env -y -c bioconda -c conda-forge $pckg
+                mamba create --force -f config/env.yml
         elif [[ "$OSTYPE" == "darwin"* ]]; then
                 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
                 brew install micromamba
                 eval "$(micromamba shell hook --shell bash)"
                 micromamba activate
                 micromamba install mamba -c conda-forge -y
-                mamba create -n marple-env -y -c bioconda -c conda-forge $pckg
+                mamba create --force -f config/env.yml
         fi
         mamba init
 fi
 
 while true; do
-    read -p "Do you want to update the softwares used in MARPLE? " yn
+    read -p "Do you want to install/update the softwares used in MARPLE? " yn
     case $yn in
     [Yy]* ) update_software; break;;
     [Nn]* ) break;;
     * ) echo "Please select an option [Yn] ";;
     esac
 done
+
+
