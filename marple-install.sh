@@ -66,7 +66,7 @@ update_software() {
     fi
 }
 
-if command -v mamba &> /dev/null; then
+if command mamba &> /dev/null; then
         if mamba env list | grep -q marple-env; then
                 while true; do
                 read -p "Do you want to update the marple-env? " yn
@@ -90,14 +90,14 @@ else
                 sleep 1
                 micromamba activate
                 micromamba install mamba -c conda-forge -y
-                mamba create --force -f config/env.yml
+                mamba env create -f config/env.yml
         elif [[ "$OSTYPE" == "darwin"* ]]; then
                 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
                 brew install micromamba
                 eval "$(micromamba shell hook --shell bash)"
                 micromamba activate
                 micromamba install mamba -c conda-forge -y
-                mamba create --force -f config/env.yml
+                mamba env create -f config/env.yml
         fi
         mamba init
 fi
