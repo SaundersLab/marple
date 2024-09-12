@@ -98,10 +98,10 @@ if command -v mamba &> /dev/null; then
     fi
 else
     if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-        curl -Ls https://micro.mamba.pm/api/micromamba/linux-64/latest | tar -xvj bin/micromamba
-        ./bin/micromamba shell init -s bash -p ~/micromamba
-        eval "$(~/micromamba/bin/micromamba shell hook -s bash)"
-        ~/micromamba/bin/micromamba install mamba -c conda-forge -y
+	    "${SHELL}" <(curl -L micro.mamba.pm/install.sh)
+	    eval "$(micromamba shell hook --shell bash)"
+	    micromamba activate
+        micromamba install mamba -c conda-forge -y
     elif [[ "$OSTYPE" == "darwin"* ]]; then
         /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
         brew install micromamba
