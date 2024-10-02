@@ -15,10 +15,6 @@ To run MARPLE:
 ```
 marple
 ```
-To view an interactive phylogenetic tree of the MARPLE output:
-```
-marple-tree
-```
 
 > These functions can be executed from anywhere in the system.
 
