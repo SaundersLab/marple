@@ -48,7 +48,7 @@ custom_data:
           suffix: "%"
           placement: 17
           hidden: true
-          description: "Percentage of positions in the amplicons of pool A primers fo which bases were called"
+          description: "Percentage of positions in the amplicons of pool A primers for which bases were called"
       - "Pool B":
           max: 100
           min: 0
@@ -56,7 +56,7 @@ custom_data:
           suffix: "%"
           placement: 18
           hidden: true
-          description: "Percentage of positions in the amplicons of pool B primers fo which bases were called"
+          description: "Percentage of positions in the amplicons of pool B primers for which bases were called"
       - "Pool C":
           max: 100
           min: 0
@@ -64,7 +64,7 @@ custom_data:
           suffix: "%"
           placement: 19
           hidden: true
-          description: "Percentage of positions in the amplicons of pool C primers fo which bases were called"
+          description: "Percentage of positions in the amplicons of pool C primers for which bases were called"
       - "Pool D":
           max: 100
           min: 0
@@ -72,7 +72,7 @@ custom_data:
           suffix: "%"
           placement: 20
           hidden: true
-          description: "Percentage of positions in the amplicons of pool D primers fo which bases were called"
+          description: "Percentage of positions in the amplicons of pool D primers for which bases were called"
       - "Plate 1":
           max: 100
           min: 0
@@ -80,7 +80,7 @@ custom_data:
           suffix: "%"
           placement: 21
           hidden: true
-          description: "Percentage of positions in the amplicons of plate 1 primers fo which bases were called"
+          description: "Percentage of positions in the amplicons of plate 1 primers for which bases were called"
       - "Plate 2":
           max: 100
           min: 0
@@ -88,7 +88,7 @@ custom_data:
           suffix: "%"
           placement: 22
           hidden: true
-          description: "Percentage of positions in the amplicons of plate 2 primers fo which bases were called"
+          description: "Percentage of positions in the amplicons of plate 2 primers for which bases were called"
       - "Plate 3":
           max: 100
           min: 0
@@ -96,7 +96,7 @@ custom_data:
           suffix: "%"
           placement: 23
           hidden: true
-          description: "Percentage of positions in the amplicons of plate 3 primers fo which bases were called"
+          description: "Percentage of positions in the amplicons of plate 3 primers for which bases were called"
       - "Plate 4":
           max: 100
           min: 0
@@ -104,7 +104,28 @@ custom_data:
           suffix: "%"
           placement: 24
           hidden: true
-          description: "Percentage of positions in the amplicons of plate 4 primers fo which bases were called"
+          description: "Percentage of positions in the amplicons of plate 4 primers for which bases were called"
+  fungicide_target_genes:
+    file_format: "csv"
+    section_name: "Fungicide Target Genes"
+    plot_type: "table"
+    pconfig:
+      id: "fungicide_target_genes_table"
+      title: "Fungicide Target Genes"
+  R_genes:
+    file_format: "csv"
+    section_name: "Resistant Genes in Host"
+    plot_type: "table"
+    pconfig:
+      id: "r_genes_table"
+      title: "Resistant Genes in Host"
+  Avr_genes:
+    file_format: "csv"
+    section_name: "Avr Genes in Pathogen"
+    plot_type: "table"
+    pconfig:
+      id: "avr_genes_table"
+      title: "Avr Genes in Pathogen"
 sp:
   amplicon_coverage:
     fn: "*_amplicon_coverage.csv"
@@ -113,4 +134,9 @@ sp:
     fn: "snp_summary.csv"
   sequencing_summary:
     fn: "*_multiqc_row.csv"
-  
+  fungicide_target_genes:
+    fn: "fung_summary.csv"
+  R_genes:
+    fn: "rgene_summary.csv"
+  Avr_genes:
+    fn: "avr_summary.csv"

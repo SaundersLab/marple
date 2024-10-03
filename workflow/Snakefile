@@ -1,5 +1,5 @@
-import glob
 import os
+import glob
 
 configfile: "config/config.yml"
 
@@ -13,14 +13,14 @@ bwa_index_extensions = [".amb", ".ann", ".bwt", ".pac", ".sa"]
 
 wildcard_constraints:
     organism="(pst)|(pgt)",
-    existing_samples="(all)|(subset)"
+    existing_samples="(all)|(subset)",
+    vir_type="(fung)|(rgene)|(avrgene)"
 
 def all_inputs(wildcards):
     inputs = {}
     for organism in samples:
         inputs[f'{organism}_tree'] = f'results/{organism}/trees/{organism}_all.pdf'
         inputs[f'{organism}_report'] = f'results/{organism}/report/{organism}.multiqc.html'
-        inputs[f'{organism}_auspice_json'] = f'results/auspice/{organism}_all_auspice.json'
     return inputs
 
 rule all:
@@ -42,8 +42,20 @@ rule create_sample_multiqc_row:
     output: 
         multiqc_row="results/{organism}/{sample}/multiqc_row/{sample}_multiqc_row.csv"
     log: "logs/{organism}/{sample}/create_sample_multiqc_row_{sample}.log"
-    conda: "envs/visualise_tree.yml"
     script: "scripts/create_sample_multiqc_row.py"
+
+rule create_fung_vir_multiqc_row:
+# Change organism as above when Pst integration is ready to run for both
+    input:
+        consensus="results/pgt/{sample}/aligned/{sample}.fna",
+        metadata="resources/fungicide_metadata.xlsx",
+        reference="resources/pgt/reference/pgt.fna",
+    output: 
+        multiqc_fung="results/pgt/{sample}/multiqc_row/{sample}_multiqc_fung_table.csv",
+        multiqc_rgene="results/pgt/{sample}/multiqc_row/{sample}_multiqc_rgene_table.csv",
+        multiqc_avr="results/pgt/{sample}/multiqc_row/{sample}_multiqc_avrgene_table.csv"
+    log: "logs/pgt/{sample}/create_fung_vir_multiqc_row_{sample}.log"
+    script: "scripts/virulence_fungicide_multiqc_row.py"
 
 rule summarise_primer_performance:
     input:
@@ -51,7 +63,6 @@ rule summarise_primer_performance:
     output:
         primer_performance_summary="results/{organism}/{sample}/primer_performance/{sample}_primer_performance_by_{groupby}.csv"
     log: "logs/{organism}/{sample}/summarise_primer_performance_by_{groupby}_{sample}.log"
-    conda: "envs/visualise_tree.yml"
     script: "scripts/summarise_primer_performance.py" 
 
 rule cumulative_amplicon_coverage:
@@ -60,7 +71,6 @@ rule cumulative_amplicon_coverage:
     output:
         cumulative_amplicon_coverage="results/{organism}/{sample}/primer_performance/{sample}_cumulative_amplicon_coverage.csv"
     log: "logs/{organism}/{sample}/cumulative_amplicon_coverage_{sample}.log"
-    conda: "envs/visualise_tree.yml"
     script: "scripts/cumulative_amplicon_coverage.py"
 
 # This is a work around to ensure that multiqc can create the plot specified in
@@ -88,8 +98,43 @@ rule summarise_snps:
     output:
         snp_counts="results/{organism}/report/snp_summary.csv"
     log: "logs/{organism}/summarise_snps.log"
-    conda: "envs/visualise_tree.yml"
     script: "scripts/summarise_snps_by_gene.py"
+
+types = ['fung', 'rgene', 'avrgene']
+
+def fung_virulence_files(wildcards):
+    files = [
+        f"results/pgt/{sample}/multiqc_row/{sample}_multiqc_{wildcards.types}_table.csv"
+        for sample in samples['pgt']
+    ]
+    return files
+
+rule summarise_virs:
+    input:
+        fungin=expand("results/pgt/{sample}/multiqc_row/{sample}_multiqc_fung_table.csv", sample=samples['pgt']),
+        srin=expand("results/pgt/{sample}/multiqc_row/{sample}_multiqc_rgene_table.csv", sample=samples['pgt']),
+        avrin=expand("results/pgt/{sample}/multiqc_row/{sample}_multiqc_avrgene_table.csv", sample=samples['pgt'])
+    output:
+        fungout="results/pgt/report/fung_summary.csv",
+        srout="results/pgt/report/rgene_summary.csv",
+        avrout="results/pgt/report/avr_summary.csv"
+    log: "logs/pgt/summarise_fungs.log"
+    shell: """
+    python -c "
+import re
+import pandas as pd
+input_files = ['{input.fungin}','{input.srin}','{input.avrin}']
+output_files = ['{output.fungout}','{output.srout}','{output.avrout}']
+for files, fout in zip(input_files, output_files):
+    file_list = re.sub('\s+', ',', files).split(',')
+    df_list = [pd.read_csv(f) for f in file_list if len(open(f, 'r').readlines()) > 1]
+    if df_list:
+        df_final = pd.concat(df_list, axis=0, ignore_index=True, sort=False)
+        df_final.to_csv(fout, index=True, index_label='index')
+    if not df_list:
+        open(fout, 'x')
+" 2> {log}
+    """
 
 rule primer_performance:
     input:
@@ -99,7 +144,6 @@ rule primer_performance:
     output:
         primer_performance="results/{organism}/{sample}/primer_performance/{sample}_primer_performance.csv"
     log: "logs/{organism}/{sample}/primer_performance_{sample}.log"
-    conda: "envs/visualise_tree.yml"
     script: "scripts/primer_performance.py"
 
 rule bwa_index:
@@ -109,7 +153,6 @@ rule bwa_index:
             "resources/{organism}/reference/{organism}.fna",
             *bwa_index_extensions
         )
-    conda: "envs/bwa_samtools.yml"
     log: "logs/{organism}/bwa_index.log"
     shell:"bwa index {input} >{log} 2>&1"
 
@@ -122,12 +165,12 @@ rule bwa_mem:
         ),
         fastq="results/{organism}/{sample}/filtered_reads/{sample}.fastq.gz",
     output: "results/{organism}/{sample}/aligned/{sample}.bam"
-    conda: "envs/bwa_samtools.yml"
     log: "logs/{organism}/{sample}/bwa_mem_{sample}.log"
     threads: config["bwa_mem_threads"]
     shell: """
     (
-        bwa mem -t {threads} {input.ref} {input.fastq} | samtools sort > {output}
+        bwa mem -t {threads} {input.ref} {input.fastq} | samtools sort > {output};
+        samtools index {output}
     ) >{log} 2>&1
     """
 
@@ -135,14 +178,12 @@ rule samtools_index:
     input: "resources/{organism}/reference/{organism}.fna"
     output: "resources/{organism}/reference/{organism}.fna.fai"
     log: "logs/{organism}/samtools_index.log"
-    conda: "envs/bwa_samtools.yml"
     shell: "samtools faidx {input} >{output} 2>{log}"
 
 rule filter_reads:
     input: "reads/{organism}/{sample}.fastq.gz"
     output: "results/{organism}/{sample}/filtered_reads/{sample}.fastq.gz"
     log: "logs/{organism}/{sample}/filter_reads_{sample}.log"
-    conda: "envs/nanoq.yml"
     shell: """
         nanoq \
             -m {config[maximum_read_length]} \
@@ -158,7 +199,6 @@ rule fastqc:
         html="results/{organism}/{sample}/fastqc/{sample}_fastqc.html",
         data="results/{organism}/{sample}/fastqc/{sample}_fastqc.zip",
     log: "logs/{organism}/{sample}/fastqc_{sample}.log"
-    conda: "envs/fastqc.yml"
     shell: "fastqc -o $(dirname {output.html}) {input} >{log} 2>&1"
 
 use rule fastqc as fastqc_filtered_reads with:
@@ -172,7 +212,6 @@ rule flagstat:
     input: "results/{organism}/{sample}/aligned/{sample}.bam"
     output: "results/{organism}/{sample}/flagstat/{sample}.txt"
     log: "logs/{organism}/{sample}/flagstat_{sample}.log"
-    conda: "envs/bwa_samtools.yml"
     shell: "samtools flagstat {input} >{output} 2>{log}"
 
 def multiqc_input(wildcards):
@@ -198,6 +237,15 @@ def multiqc_input(wildcards):
         for sample in samples[organism]
     ]
     files += [
+        "results/pgt/report/fung_summary.csv"
+    ]
+    files += [
+        "results/pgt/report/rgene_summary.csv"
+    ]
+    files += [
+        "results/pgt/report/avr_summary.csv"
+    ]
+    files += [
         f"results/{organism}/report/snp_summary.csv"
     ]
     return files
@@ -206,7 +254,6 @@ rule multiqc:
     input: multiqc_input
     output: "results/{organism}/report/{organism}.multiqc.html",
     log: "logs/{organism}/multiqc_{organism}.log",
-    conda: "envs/multiqc.yml"
     shell: """
         tempdir=$(mktemp -d)
         cp {input} $tempdir
@@ -221,7 +268,6 @@ rule pileup:
         bam="results/{organism}/{sample}/aligned/{sample}.bam",
     output: "results/{organism}/{sample}/aligned/{sample}.pileup.gz"
     log: "logs/{organism}/{sample}/pileup_{sample}.log"
-    conda: "envs/bwa_samtools.yml"
     shell: "(samtools mpileup -f {input.ref} {input.bam} | gzip -c > {output}) >{log} 2>&1"
 
 rule consensus:
@@ -232,7 +278,6 @@ rule consensus:
         consensus="results/{organism}/{sample}/aligned/{sample}.fna",
         snps="results/{organism}/{sample}/snps/{sample}.tsv"
     log: "logs/{organism}/{sample}/consensus_{sample}.log"
-    conda: "envs/biopython_pandas.yml"
     script: "scripts/pileup_to_consensus.py"
 
 rule extract_cds:
@@ -241,7 +286,6 @@ rule extract_cds:
         gff="resources/{organism}/reference/{organism}.gff",
     output: "results/{organism}/{sample}/aligned/{sample}.ffn"
     log: "logs/{organism}/{sample}/extract_cds_{sample}.log"
-    conda: "envs/gffread.yml"
     shell: "gffread -x {output} -g {input.consensus} {input.gff} >{log} 2>&1"
 
 rule flatten:
@@ -286,137 +330,4 @@ rule visualise_tree:
         metadata="resources/{organism}/{organism}_sample_metadata.xlsx"
     output: "results/{organism}/trees/{organism}_{existing_samples}.pdf"
     log: "logs/{organism}/trees/visualise_tree_{existing_samples}.log"
-    conda: "envs/visualise_tree.yml"
     script: "scripts/visualise_tree.py"
-
-rule convert_metaxls:
-    input:
-        metadata="resources/{organism}/{organism}_sample_metadata.xlsx"
-    output:
-        metadata="resources/{organism}/{organism}_sample_metadata.csv"
-    log: "logs/{organism}/auspice/convertxls.log"
-    shell:
-        """
-        ssconvert {input.metadata} {output.metadata}
-        sed -i-e 's!tree_new_name!strain!g' {output.metadata}
-        sed -i-e 's!nextstrain_group!group!g' {output.metadata}
-        sed -i-e 's!\"!!g' {output.metadata}
-        awk -F',' -v OFS=',' '{{sub(/ [^,]*|:[^,]*/, "", $2); a[$2]++; if(a[$2] > 1) {{$2 = $2"-2"}} print}}' {output.metadata} > {output.metadata}tmp
-        mv {output.metadata}tmp {output.metadata}
-        rm {output.metadata}-e
-        """
-
-rule rename_tree:
-    input:
-        metadata=rules.convert_metaxls.output.metadata,
-        treefna=rules.tree.input,
-        treenwk=rules.tree.output
-    output:
-        mvfna="results/{organism}/trees/auspice/renamed_{organism}_{existing_samples}.ffn",
-        mvnwk="results/{organism}/trees/auspice/renamed_{organism}_{existing_samples}.nwk"
-    log: "logs/{organism}/auspice/rename-fna-nwk_{existing_samples}.log"
-    shell:
-        """
-        cp {input.treefna} {output.mvfna}tmp
-        cp {input.treenwk} {output.mvnwk}tmp
-        while IFS=, read -r old_name new_name _; do
-            if grep -Fq $old_name {input.treefna}; then
-                sed -i "s!$old_name!$new_name!" {output.mvfna}tmp
-            fi
-            if grep -Fq "$old_name" {input.treenwk}; then
-                sed -i "s!$old_name!$new_name!" {output.mvnwk}tmp
-            fi
-        done < {input.metadata} > {log}
-        mv {output.mvfna}tmp {output.mvfna}
-        mv {output.mvnwk}tmp {output.mvnwk}
-        """
-
-rule index_sequences:
-    input:
-        sequences=rules.rename_tree.output.mvfna
-    output:
-        indexed_sequences="results/{organism}/trees/auspice/{organism}_{existing_samples}.tsv"
-    log: "logs/{organism}/auspice/index_{existing_samples}.log"
-    shell: "augur index --sequences {input.sequences} --output {output.indexed_sequences} > {log} 2>&1"
-
-rule refine:
-    input:
-        sequences=rules.rename_tree.output.mvfna,
-        metadata=rules.convert_metaxls.output.metadata,
-        tree=rules.rename_tree.output.mvnwk
-    output:
-        tree="results/{organism}/trees/auspice/{existing_samples}_tree.nwk",
-        node_data="results/{organism}/trees/auspice/{existing_samples}_branch_lengths.json"
-    log: "logs/{organism}/auspice/refine_{existing_samples}.log"
-    shell:
-        """
-        augur refine \
-        --alignment {input.sequences} \
-        --tree {input.tree} \
-        --metadata {input.metadata} \
-        --output-tree {output.tree} \
-        --output-node-data {output.node_data} > {log} 2>&1
-        """
-
-rule ancestral:
-    input:
-        tree=rules.refine.output.tree,
-        sequences=rules.rename_tree.output.mvfna
-    output:
-        node_data="results/{organism}/trees/auspice/{existing_samples}_nt_muts.json"
-    params:
-        inference="joint"
-    log: "logs/{organism}/auspice/ancestral_{existing_samples}.log"
-    shell:
-        """
-        augur ancestral \
-        --tree {input.tree} \
-        --alignment {input.sequences} \
-        --output-node-data {output.node_data} \
-        --inference {params.inference} > {log} 2>&1
-        """
-
-rule traits:
-    input:
-        tree=rules.refine.output.tree,
-        metadata=rules.convert_metaxls.output.metadata
-    output:
-        traits="results/{organism}/trees/auspice/{existing_samples}_traits.json"
-    params:
-        columns="country region"
-    log: "logs/{organism}/auspice/traits_{existing_samples}.log"
-    shell:
-        """
-        augur traits \
-        --tree {input.tree} \
-        --metadata {input.metadata} \
-        --output-node-data {output.traits} \
-        --columns {params.columns} \
-        --confidence > {log} 2>&1 
-        """
-
-rule export:
-    input:
-        tree=rules.refine.output.tree,
-        metadata=rules.convert_metaxls.output.metadata,
-        branch_lengths=rules.refine.output.node_data,
-        traits=rules.traits.output.traits,
-        nt_muts=rules.ancestral.output.node_data,
-        colors="config/auspice/colors.tsv",
-        lat_longs="config/auspice/lat_longs.tsv",
-        auspice_config="config/auspice/auspice_config.json"
-    output:
-        auspice_json="results/auspice/{organism}_{existing_samples}_auspice.json"
-    log: "logs/{organism}/auspice/export_{existing_samples}.log"
-    shell:
-        """
-        augur export v2 \
-        --tree {input.tree} \
-        --metadata {input.metadata} \
-        --node-data {input.branch_lengths} {input.traits} {input.nt_muts} \
-        --colors {input.colors} \
-        --lat-longs {input.lat_longs} \
-        --auspice-config {input.auspice_config} \
-        --include-root-sequence \
-        --output {output.auspice_json} > {log} 2>&1
-        """
