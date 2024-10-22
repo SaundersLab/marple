@@ -6,7 +6,7 @@ log_file="snakemake.log"
 
 if command -v mamba &> /dev/null; then
     if mamba env list | grep -q marple-env; then
-	    mamba run -n marple-env snakemake --unlock &> /dev/null 
+        mamba run -n marple-env snakemake --unlock &> /dev/null 
         mamba run -n marple-env $run_cmd > $log_file 2>&1 &
         pid=$!
         spin='-\|/'
