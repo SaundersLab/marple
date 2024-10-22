@@ -13,8 +13,7 @@ bwa_index_extensions = [".amb", ".ann", ".bwt", ".pac", ".sa"]
 
 wildcard_constraints:
     organism="(pst)|(pgt)",
-    existing_samples="(all)|(subset)",
-    vir_type="(fung)|(rgene)|(avrgene)"
+    existing_samples="(all)|(subset)"
 
 def all_inputs(wildcards):
     inputs = {}
@@ -111,30 +110,36 @@ def fung_virulence_files(wildcards):
 
 rule summarise_virs:
     input:
-        fungin=expand("results/pgt/{sample}/multiqc_row/{sample}_multiqc_fung_table.csv", sample=samples['pgt']),
-        srin=expand("results/pgt/{sample}/multiqc_row/{sample}_multiqc_rgene_table.csv", sample=samples['pgt']),
-        avrin=expand("results/pgt/{sample}/multiqc_row/{sample}_multiqc_avrgene_table.csv", sample=samples['pgt'])
+        fungin=expand("results/pgt/{sample}/multiqc_row/{sample}_multiqc_fung_table.csv", sample=samples['pgt']) if 'pgt' in samples else '',
+        srin=expand("results/pgt/{sample}/multiqc_row/{sample}_multiqc_rgene_table.csv", sample=samples['pgt']) if 'pgt' in samples else '',
+        avrin=expand("results/pgt/{sample}/multiqc_row/{sample}_multiqc_avrgene_table.csv", sample=samples['pgt']) if 'pgt' in samples else ''
     output:
         fungout="results/pgt/report/fung_summary.csv",
         srout="results/pgt/report/rgene_summary.csv",
         avrout="results/pgt/report/avr_summary.csv"
     log: "logs/pgt/summarise_fungs.log"
-    shell: """
-    python -c "
+    run:
+        input_files = input.fungin + input.srin + input.avrin
+        if all(os.path.exists(f) for f in input_files):
+            shell("""
+            python -c "
 import re
 import pandas as pd
 input_files = ['{input.fungin}','{input.srin}','{input.avrin}']
 output_files = ['{output.fungout}','{output.srout}','{output.avrout}']
 for files, fout in zip(input_files, output_files):
-    file_list = re.sub('\s+', ',', files).split(',')
+    file_list = re.sub('\\s+', ',', files).split(',')
     df_list = [pd.read_csv(f) for f in file_list if len(open(f, 'r').readlines()) > 1]
     if df_list:
         df_final = pd.concat(df_list, axis=0, ignore_index=True, sort=False)
         df_final.to_csv(fout, index=True, index_label='index')
     if not df_list:
         open(fout, 'x')
-" 2> {log}
-    """
+            " 2> {log}
+            """)
+        else:
+            print("Skipping summarise_virs because input files do not exist.")
+
 
 rule primer_performance:
     input:
@@ -237,17 +242,18 @@ def multiqc_input(wildcards):
         for sample in samples[organism]
     ]
     files += [
-        "results/pgt/report/fung_summary.csv"
-    ]
-    files += [
-        "results/pgt/report/rgene_summary.csv"
-    ]
-    files += [
-        "results/pgt/report/avr_summary.csv"
-    ]
-    files += [
         f"results/{organism}/report/snp_summary.csv"
     ]
+    if wildcards.organism == 'pgt':
+        files += [
+            "results/pgt/report/fung_summary.csv"
+        ]
+        files += [
+            "results/pgt/report/rgene_summary.csv"
+        ]
+        files += [
+            "results/pgt/report/avr_summary.csv"
+            ]
     return files
 
 rule multiqc:
