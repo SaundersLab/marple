@@ -1,5 +1,5 @@
 #!/bin/bash
-# last update: 12/09/2024
+# last update: 02/12/2024
 
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
     wd="/home/$USER/marple"
@@ -22,6 +22,20 @@ fi
 marple_func='\nfunction marple() {\npushd ~/marple > /dev/null 2>&1\nmamba activate marple-env \ncat .version.info \nbash marple.sh \nmamba deactivate \npopd > /dev/null 2>&1\n}'
 transfer_pst_func='\nfunction transfer-pst() {\nexperiment=$1\nshift\nfor arg in "$@";do\nIFS="=" read -r barcode sample<<<"$arg"\nfind /var/lib/minknow/data/* -type d -name "$experiment" 2>/dev/null | xargs -I {} find '{}' -type d -name basecalling | while read dir; do\ncat $dir/pass/"$barcode"/*.fastq.gz > ~/marple/reads/pst/"$sample".fastq.gz\ndone\ndone\n}'
 transfer_pgt_func='\nfunction transfer-pgt() {\nexperiment=$1\nshift\nfor arg in "$@";do\nIFS="=" read -r barcode sample<<<"$arg"\nfind /var/lib/minknow/data/* -type d -name "$experiment" 2>/dev/null | xargs -I {} find '{}' -type d -name basecalling | while read dir; do\ncat $dir/pass/"$barcode"/*.fastq.gz > ~/marple/reads/pgt/"$sample".fastq.gz\ndone\ndone\n}'
+
+# MARPLE-GUI installation
+APP_NAME="MARPLE"
+EXEC_PATH="$wd/marple/marple-gui/marple-gui.py"
+ICON_PATH="$wd/marple/marple-gui/MARPLE_justlogo.png"
+DESKTOP_FILE="$HOME/.local/share/applications/${APP_NAME}.desktop"
+if [[ ! -f "$DESKTOP_FILE" ]]; then
+    echo -e "[Desktop Entry]\nName=${APP_NAME}\n
+    Exec=sh -c '/home/marple/micromamba/bin/mamba run -n marple-env python3 ${EXEC_PATH} > /tmp/marple-gui.log 2>&1'
+    \nIcon=${ICON_PATH}\nType=Application\Terminal=false\nCategories=Utility;Application;" > "$DESKTOP_FILE"
+    chmod +x "$DESKTOP_FILE"
+    update-desktop-database ~/.local/share/applications
+fi
+
 
 # Create backup of .bashrc and add marple functions
 if [[ ! -d ".marple-tmp" ]] && ! grep -q 'transfer-pgt' "$bashf"; then
