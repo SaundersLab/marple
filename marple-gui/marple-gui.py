@@ -716,12 +716,10 @@ class App(ctk.CTk):
 
     def open_file(self, type, subdir, filename):
         file_path = os.path.join(self.marpledir, "results", type, subdir, filename)
-        if filename.endswith(".pdf"):
-            print(f'xdg-open {file_path}')
-            os.system(f"xdg-open {file_path}")
-        elif filename.endswith(".html"):
+        if not os.path.exists(file_path):
+            self.printin(f"File {filename} not found in {os.path.join(self.marpledir,"results",type,subdir)}.")
+        elif filename.endswith(".pdf") or filename.endswith(".html"):
             os.system(f"xdg-open {file_path}")
         
-
 app = App()
 app.mainloop()
