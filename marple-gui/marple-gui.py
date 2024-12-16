@@ -1,16 +1,18 @@
 import os
 import cv2
+import time
 import shlex
 import psutil
 import shutil
 import threading
 import subprocess
+import numpy as np
 import tkinter as tk
 from PIL import Image
 from pathlib import Path
 from pyzbar import pyzbar
 import customtkinter as ctk
-from tkinter import Menu, filedialog, ttk
+from tkinter import Menu, filedialog, ttk, messagebox
 
 class App(ctk.CTk):
     def __init__(self):
@@ -218,22 +220,62 @@ class App(ctk.CTk):
             self.show_no_barcode_option(metadata_container, row)
             
     def scan_barcode_cam(self, marple_barcode=False):
-        cap = cv2.VideoCapture(0)
+        cam_index = self.find_external_camera()
+        if cam_index is None:
+            messagebox.showerror("Error", "No camera found!")
+            return
+        
+        cap = cv2.VideoCapture(cam_index)
         if not cap.isOpened():
-            self.printin("Error: Could not open camera.")
+            messagebox.showerror("Error", "Could not open any camera.")
             return None
-
+        
         barcode_data = None
         self.scanner_running = True
 
+        # Add timeout to limit cpu/gpu usage
+        start_time = time.time()
+
         while self.scanner_running:
+            elapsed_time = time.time() - start_time
+            if elapsed_time > 20:  # 20-second timeout
+                messagebox.showwarning("Warning","Camera timeout. No barcode detected within 20 seconds.")
+                break
+
             ret, frame = cap.read()
             if not ret:
                 self.printin("Error: Failed to capture image.")
                 break
 
-            barcodes = pyzbar.decode(frame)
+            # Trying to increase the chances of successful scan by enhancing image
+            # Convert frame to grayscale
+            gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+            # Apply a sharpening filter
+            kernel = np.array([[0, -1, 0], 
+                            [-1, 5, -1], 
+                            [0, -1, 0]])
             
+            # Combine sharpening with contrast enhancement using CLAHE (Contrast Limited Adaptive Histogram Equalization))
+            
+            clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+            equalized = clahe.apply(gray_frame)
+
+            # Sharpen after histogram equalization
+            sharp_frame = cv2.filter2D(equalized, -1, kernel)
+
+            # Adjust brightness and contrast (clip values to stay in valid range)
+            alpha = 2    # Contrast control (1.0-3.0)
+            beta = 20    # Brightness control (0-100)
+            enhanced_frame = cv2.convertScaleAbs(sharp_frame, alpha=alpha, beta=beta)
+
+            # Upscale image for better decoding
+            upscale_factor = 3
+            enhanced_frame = cv2.resize(enhanced_frame, 
+                                        (frame.shape[1] * upscale_factor, frame.shape[0] * upscale_factor), 
+                                        interpolation=cv2.INTER_LINEAR)
+
+            barcodes = pyzbar.decode(enhanced_frame)
 
             for barcode in barcodes:
                 barcode_data = barcode.data.decode("utf-8")
@@ -242,11 +284,11 @@ class App(ctk.CTk):
                     self.scanner_running = False
                     break
                 elif marple_barcode and not barcode_data.startswith("M"):
-                    self.scanner_running = False
-                    self.printin("Invalid barcode. Please scan a MARPLE barcode.")
                     # I used to be able to just continue scanning until a valid barcode was detected
                     # but now it seems to be stuck in an infinite loop if an invalid barcode is scanned
                     # so I'm breaking out of the loop and returning None
+                    self.scanner_running = False
+                    messagebox.showerror("Error","Invalid barcode. Please scan a MARPLE barcode.")
                     break
                 else:
                     self.printin(f"Barcode detected: {barcode_data}")
@@ -263,10 +305,36 @@ class App(ctk.CTk):
         cv2.destroyAllWindows()
         return barcode_data
 
-        cap.release()
-        cv2.destroyAllWindows()
-        return barcode_data
+    def find_external_camera(self):
+        max_inputs = 8
+        camera_indices = []
+        
+        for i in range(max_inputs):
+            cap = cv2.VideoCapture(i)
+            if cap.isOpened():
+                # Test if camera works
+                ret, _ = cap.read()
+                if ret:
+                    camera_indices.append(i)
+                cap.release()
+        
+        # Identify external webcam (assume external by resolution)
+        for index in camera_indices:
+            cap = cv2.VideoCapture(index)
+            if cap.isOpened():
+                # Retrieve resolution
+                width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+                height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                print(f"Camera {index}: {width}x{height}")
+                cap.release()
+                if width > 1280 or height > 720:
+                    return index
+        
+        if camera_indices[0] == 0:
+            self.printin(f"External webcam not found. Falling back to the default camera ({height}p).")
 
+        # Default to the first available camera if no external is found
+        return camera_indices[0] if camera_indices else None
 
     def toggle_scanner(self, container, row, marple_toggle=False):
         self.run_scanner(container, row, marple_toggle)
@@ -407,7 +475,7 @@ class App(ctk.CTk):
 
     def transfer_reads(self):
         if not self.minknow_dir or self.minknow_dir == self.minknow_default_dir:
-            self.printin("MinKNOW directory not selected.")
+            messagebox.showerror("Error","MinKNOW directory not selected.")
             return
 
         for row in self.barcode_rows:
@@ -415,25 +483,25 @@ class App(ctk.CTk):
             if row["dropdown_var"].get() == "Recorded In-Field":
                 marple_barcode = row.get("marple_barcode")
                 if not marple_barcode or not marple_barcode.strip().startswith("M"):
-                    self.printin("Please scan a valid QR code.")
+                    messagebox.showerror("Please scan a valid QR code.")
                     return
 
             elif row["dropdown_var"].get() == "Extracted from Live":
                 odk_barcode = row.get("odk_barcode")
                 marple_barcode = row.get("marple_barcode")
                 if not odk_barcode or not marple_barcode or not marple_barcode.strip().startswith("M"):
-                    self.printin("Please scan valid QR codes.")
+                    messagebox.showerror("Please scan valid QR codes.")
                     return
 
             elif row["dropdown_var"].get() == "No Barcode":
                 if any(not field.get().strip() for field in [
                     row["sample"], row["collection_date"], row["location"],
                     row["country"], row["collector_name"], row["cultivar"]]):
-                    self.printin("Please fill in all metadata fields.")
+                    messagebox.showerror("Please fill in all metadata fields.")
                     
         # Check if a transfer is already in progress
         if self.transfer_in_progress:
-            self.show_warning("Transfer Reads Process Running. Wait until it finishes.")
+            messagebox.showwarning("Warning","Transfer Reads Process Running. Wait until it finishes.")
             return
 
         # Start the transfer process
@@ -450,7 +518,7 @@ class App(ctk.CTk):
         try:
             total_barcodes = len(self.barcode_rows)
             if total_barcodes == 0:
-                self.printin("No barcodes to process.")
+                messagebox.showerror("Error","No barcodes to process.")
                 return
 
             # Read existing metadata
@@ -505,9 +573,9 @@ class App(ctk.CTk):
                                     existing_metadata.append(new_metadata_line)
 
                                 except Exception as e:
-                                    self.printin(f"An error occurred while processing barcode{barcode}: {e}")
+                                    messagebox.showerror("Error",f"An error occurred while processing barcode{barcode}: {e}")
                             else:
-                                self.printin(f"Barcode{barcode} not found in MinKNOW directory.")
+                                messagebox.showerror("Error",f"Barcode{barcode} not found in MinKNOW directory.")
 
             # Write the updated metadata back to the file
             with open(metadata_file, 'w') as f:
@@ -575,11 +643,11 @@ class App(ctk.CTk):
                     self.stop_marple(forced=False)
                     self.start_marple()
                 else:
-                    self.printin("mamba environment marple-env not found.")
+                    messagebox.showerror("Error","mamba environment marple-env not found.")
             except subprocess.CalledProcessError as e:
-                self.printin(f"Error running command: {e}")
+                messagebox.showerror("Error",f"Error running command: {e}")
         else:
-            self.printin("mamba not found.")
+            messagebox.showerror("Error","mamba not found.")
         
         self.progress_bar.stop()
         self.progress_bar.pack_forget()
@@ -598,7 +666,7 @@ class App(ctk.CTk):
             
             self.printin("MARPLE Snakemake workflow started.")
         except Exception as e:
-            self.printin(f"Failed to start Snakemake: {e}")
+            messagebox.showerror("Error",f"Failed to start Snakemake: {e}")
 
     def capture_output(self, stream):
         # Append captured output to the output_lines
@@ -614,7 +682,7 @@ class App(ctk.CTk):
         # Stop the Snakemake process if running
         if self.snakemake_process and self.snakemake_process.poll() is None:
             self.snakemake_process.terminate()
-            self.printin("MARPLE process terminated.")
+            messagebox.showinfo("MARPLE process terminated.")
             
             # Kill child processes of Snakemake (if any)
             try:
@@ -716,10 +784,12 @@ class App(ctk.CTk):
 
     def open_file(self, type, subdir, filename):
         file_path = os.path.join(self.marpledir, "results", type, subdir, filename)
-        if not os.path.exists(file_path):
-            self.printin(f"File {filename} not found in {os.path.join(self.marpledir,"results",type,subdir)}.")
-        elif filename.endswith(".pdf") or filename.endswith(".html"):
+        if filename.endswith(".pdf"):
+            print(f'xdg-open {file_path}')
+            os.system(f"xdg-open {file_path}")
+        elif filename.endswith(".html"):
             os.system(f"xdg-open {file_path}")
         
+
 app = App()
 app.mainloop()
