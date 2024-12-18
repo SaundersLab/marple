@@ -270,7 +270,7 @@ class App(ctk.CTk):
             enhanced_frame = cv2.convertScaleAbs(sharp_frame, alpha=alpha, beta=beta)
 
             # Upscale image for better decoding
-            upscale_factor = 3
+            upscale_factor = 2
             enhanced_frame = cv2.resize(enhanced_frame, 
                                         (frame.shape[1] * upscale_factor, frame.shape[0] * upscale_factor), 
                                         interpolation=cv2.INTER_LINEAR)
@@ -280,8 +280,8 @@ class App(ctk.CTk):
             for barcode in barcodes:
                 barcode_data = barcode.data.decode("utf-8")
                 if marple_barcode and barcode_data.startswith("M"):
-                    self.printin(f"MARPLE Barcode detected: {barcode_data}")
                     self.scanner_running = False
+                    messagebox.showinfo("Info",f"MARPLE Barcode detected: {barcode_data}")
                     break
                 elif marple_barcode and not barcode_data.startswith("M"):
                     # I used to be able to just continue scanning until a valid barcode was detected
