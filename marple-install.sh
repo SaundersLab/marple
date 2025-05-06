@@ -1,5 +1,5 @@
 #!/bin/bash
-# last update: 12/09/2024
+# last update: 06/05/2025
 
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
     wd="/home/$USER/marple"
