@@ -108,6 +108,7 @@ else
         eval "$(micromamba shell hook --shell bash)"
         micromamba install mamba -c conda-forge -y
     fi
+    micromamba install mamba -c conda-forge -y
     mamba init
     mamba env create -f config/env.yml
 fi
