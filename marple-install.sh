@@ -19,7 +19,7 @@ if [[ "$cwd" != "$wd" ]]; then
     exit 1
 fi
 
-marple_func='\nfunction marple() {\npushd ~/marple > /dev/null 2>&1 \neval "$(mamba shell hook --shell bash)" \nmamba activate marple-env \ncat .version.info \nbash marple.sh \nmamba deactivate \npopd > /dev/null 2>&1\n}'
+marple_func='\nfunction marple() {\npushd ~/marple > /dev/null 2>&1 \neval "$(mamba shell hook --shell bash)" \ncat .version.info \nbash marple.sh \npopd > /dev/null 2>&1\n}'
 transfer_pst_func='\nfunction transfer-pst() {\nexperiment=$1\nshift\nfor arg in "$@";do\nIFS="=" read -r barcode sample<<<"$arg"\nfind /var/lib/minknow/data/* -type d -name "$experiment" 2>/dev/null | xargs -I {} find '{}' -type d -name basecalling | while read dir; do\ncat $dir/pass/"$barcode"/*.fastq.gz > ~/marple/reads/pst/"$sample".fastq.gz\ndone\ndone\n}'
 transfer_pgt_func='\nfunction transfer-pgt() {\nexperiment=$1\nshift\nfor arg in "$@";do\nIFS="=" read -r barcode sample<<<"$arg"\nfind /var/lib/minknow/data/* -type d -name "$experiment" 2>/dev/null | xargs -I {} find '{}' -type d -name basecalling | while read dir; do\ncat $dir/pass/"$barcode"/*.fastq.gz > ~/marple/reads/pgt/"$sample".fastq.gz\ndone\ndone\n}'
 
