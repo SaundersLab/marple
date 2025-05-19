@@ -21,6 +21,6 @@ marple
 > [!IMPORTANT]
 > The functions here, assume the reads are in `/var/lib/minknow/data/` and marple in `/home/$USER/`.
 
-Cite this work:
-[1] https://doi.org/10.1186/s12864-025-11428-w
-[2] https://doi.org/10.1186/s12915-019-0684-y
+Cite this work: 
+[1] https://doi.org/10.1186/s12864-025-11428-w 
+[2] https://doi.org/10.1186/s12915-019-0684-y 
