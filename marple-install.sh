@@ -20,8 +20,33 @@ if [[ "$cwd" != "$wd" ]]; then
 fi
 
 marple_func='\nfunction marple() {\npushd ~/marple > /dev/null 2>&1 \neval "$(mamba shell hook --shell bash)" \ncat .version.info \nbash marple.sh \npopd > /dev/null 2>&1\n}'
-transfer_pst_func='\nfunction transfer-pst() {\nexperiment=$1\nshift\nfor arg in "$@";do\nIFS="=" read -r barcode sample<<<"$arg"\nfind /var/lib/minknow/data/* -type d -name "$experiment" 2>/dev/null | xargs -I {} find '{}' -type d -name basecalling | while read dir; do\ncat $dir/pass/"$barcode"/*.fastq.gz > ~/marple/reads/pst/"$sample".fastq.gz\ndone\ndone\n}'
-transfer_pgt_func='\nfunction transfer-pgt() {\nexperiment=$1\nshift\nfor arg in "$@";do\nIFS="=" read -r barcode sample<<<"$arg"\nfind /var/lib/minknow/data/* -type d -name "$experiment" 2>/dev/null | xargs -I {} find '{}' -type d -name basecalling | while read dir; do\ncat $dir/pass/"$barcode"/*.fastq.gz > ~/marple/reads/pgt/"$sample".fastq.gz\ndone\ndone\n}'
+transfer_pst_func='
+function transfer-pgt() {
+  experiment=$1
+  shift
+  for arg in "$@"; do
+    IFS="=" read -r barcode sample <<< "$arg"
+    # Remove output file first to avoid duplicate content if the function is rerun
+    rm -f ~/marple/reads/pst/"$sample".fastq.gz
+    find /var/lib/minknow/data/* -type d -name "$experiment" 2>/dev/null | \
+    xargs -I {} find "{}" -type d -name basecalling | while read dir; do
+      cat "$dir/pass/$barcode"/*.fastq.gz >> ~/marple/reads/pst/"$sample".fastq.gz 2>/dev/null
+    done
+  done
+}'
+transfer_pgt_func='
+function transfer-pgt() {
+  experiment=$1
+  shift
+  for arg in "$@"; do
+    IFS="=" read -r barcode sample <<< "$arg"
+    rm -f ~/marple/reads/pgt/"$sample".fastq.gz
+    find /var/lib/minknow/data/* -type d -name "$experiment" 2>/dev/null | \
+    xargs -I {} find "{}" -type d -name basecalling | while read dir; do
+      cat "$dir/pass/$barcode"/*.fastq.gz >> ~/marple/reads/pgt/"$sample".fastq.gz 2>/dev/null
+    done
+  done
+}'
 
 # Create backup of .bashrc and add marple functions
 if [[ ! -d ".marple-tmp" ]] && ! grep -q 'transfer-pgt' "$bashf"; then
