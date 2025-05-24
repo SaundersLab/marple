@@ -21,17 +21,21 @@ fi
 
 marple_func='\nfunction marple() {\npushd ~/marple > /dev/null 2>&1 \neval "$(mamba shell hook --shell bash)" \ncat .version.info \nbash marple.sh \npopd > /dev/null 2>&1\n}'
 transfer_pst_func='
-function transfer-pgt() {
+function transfer-pst() {
   experiment=$1
   shift
   for arg in "$@"; do
     IFS="=" read -r barcode sample <<< "$arg"
-    # Remove output file first to avoid duplicate content if the function is rerun
     rm -f ~/marple/reads/pst/"$sample".fastq.gz
-    find /var/lib/minknow/data/* -type d -name "$experiment" 2>/dev/null | \
-    xargs -I {} find "{}" -type d -name basecalling | while read dir; do
-      cat "$dir/pass/$barcode"/*.fastq.gz >> ~/marple/reads/pst/"$sample".fastq.gz 2>/dev/null
-    done
+    # Find the most recent basecalling directory
+    newest_dir=$(find /var/lib/minknow/data/* -type d -name "$experiment" 2>/dev/null | \
+                 xargs -I {} find "{}" -type d -name basecalling | \
+                 xargs -d "\n" ls -dt 2>/dev/null | head -n 1)
+    if [ -n "$newest_dir" ]; then
+      cat "$newest_dir/pass/$barcode"/*.fastq.gz >> ~/marple/reads/pst/"$sample".fastq.gz 2>/dev/null
+    else
+      echo "No basecalling directory found for experiment: $experiment"
+    fi
   done
 }'
 transfer_pgt_func='
@@ -41,10 +45,15 @@ function transfer-pgt() {
   for arg in "$@"; do
     IFS="=" read -r barcode sample <<< "$arg"
     rm -f ~/marple/reads/pgt/"$sample".fastq.gz
-    find /var/lib/minknow/data/* -type d -name "$experiment" 2>/dev/null | \
-    xargs -I {} find "{}" -type d -name basecalling | while read dir; do
-      cat "$dir/pass/$barcode"/*.fastq.gz >> ~/marple/reads/pgt/"$sample".fastq.gz 2>/dev/null
-    done
+    # Find the most recent basecalling directory
+    newest_dir=$(find /var/lib/minknow/data/* -type d -name "$experiment" 2>/dev/null | \
+                 xargs -I {} find "{}" -type d -name basecalling | \
+                 xargs -d "\n" ls -dt 2>/dev/null | head -n 1)
+    if [ -n "$newest_dir" ]; then
+      cat "$newest_dir/pass/$barcode"/*.fastq.gz >> ~/marple/reads/pgt/"$sample".fastq.gz 2>/dev/null
+    else
+      echo "No basecalling directory found for experiment: $experiment"
+    fi
   done
 }'
 
