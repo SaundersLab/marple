@@ -1,5 +1,5 @@
 #!/bin/bash
-# last update: 14/05/2025
+# last update: 29/08/2025
 
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
     wd="/home/$USER/marple"
@@ -19,7 +19,7 @@ if [[ "$cwd" != "$wd" ]]; then
     exit 1
 fi
 
-marple_func='\nfunction marple() {\npushd ~/marple > /dev/null 2>&1 \neval "$(mamba shell hook --shell bash)" \ncat .version.info \nbash marple.sh \npopd > /dev/null 2>&1\n}'
+
 transfer_pst_func='
 function transfer-pst() {
   experiment=$1
@@ -56,6 +56,21 @@ function transfer-pgt() {
     fi
   done
 }'
+marple_func='\nfunction marple() {\npushd ~/marple > /dev/null 2>&1\ncat .version.info \nbash marple.sh \npopd > /dev/null 2>&1\n}'
+
+# MARPLE-GUI installation
+APP_NAME="MARPLE"
+EXEC_PATH="$wd/marple/marple-gui/marple-gui.py"
+ICON_PATH="$wd/marple/marple-gui/MARPLE_justlogo.png"
+DESKTOP_FILE="$HOME/.local/share/applications/${APP_NAME}.desktop"
+if [[ ! -f "$DESKTOP_FILE" ]]; then
+    echo -e "[Desktop Entry]\nName=${APP_NAME}\n
+    Exec=sh -c '/home/marple/micromamba/bin/mamba run -n marple-env python3 ${EXEC_PATH} > /tmp/marple-gui.log 2>&1'
+    \nIcon=${ICON_PATH}\nType=Application\Terminal=false\nCategories=Utility;Application;" > "$DESKTOP_FILE"
+    chmod +x "$DESKTOP_FILE"
+    update-desktop-database ~/.local/share/applications
+fi
+
 
 # Create backup of .bashrc and add marple functions
 if [[ ! -d ".marple-tmp" ]] && ! grep -q 'transfer-pgt' "$bashf"; then
@@ -143,9 +158,9 @@ else
         micromamba activate
         micromamba install mamba -c conda-forge -y
     fi
-    mamba shell init --shell bash
-    source "$bashf"
-    eval "$(mamba shell hook --shell bash)"
+
+    micromamba install mamba -c conda-forge -y
+    mamba init
     mamba env create -f config/env.yml
 fi
 

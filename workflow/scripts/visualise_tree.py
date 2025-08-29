@@ -7,6 +7,7 @@ from hashlib import sha1
 import matplotlib 
 import colorsys
 import argparse
+matplotlib.use('Agg')
 
 def string_to_color(s: str) -> str:
     if s == '?':
