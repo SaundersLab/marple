@@ -1,5 +1,5 @@
 #!/bin/bash
-# last update: 06/05/2025
+# last update: 29/08/2025
 
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
     wd="/home/$USER/marple"
@@ -19,9 +19,44 @@ if [[ "$cwd" != "$wd" ]]; then
     exit 1
 fi
 
+
+transfer_pst_func='
+function transfer-pst() {
+  experiment=$1
+  shift
+  for arg in "$@"; do
+    IFS="=" read -r barcode sample <<< "$arg"
+    rm -f ~/marple/reads/pst/"$sample".fastq.gz
+    # Find the most recent basecalling directory
+    newest_dir=$(find /var/lib/minknow/data/* -type d -name "$experiment" 2>/dev/null | \
+                 xargs -I {} find "{}" -type d -name basecalling | \
+                 xargs -d "\n" ls -dt 2>/dev/null | head -n 1)
+    if [ -n "$newest_dir" ]; then
+      cat "$newest_dir/pass/$barcode"/*.fastq.gz >> ~/marple/reads/pst/"$sample".fastq.gz 2>/dev/null
+    else
+      echo "No basecalling directory found for experiment: $experiment"
+    fi
+  done
+}'
+transfer_pgt_func='
+function transfer-pgt() {
+  experiment=$1
+  shift
+  for arg in "$@"; do
+    IFS="=" read -r barcode sample <<< "$arg"
+    rm -f ~/marple/reads/pgt/"$sample".fastq.gz
+    # Find the most recent basecalling directory
+    newest_dir=$(find /var/lib/minknow/data/* -type d -name "$experiment" 2>/dev/null | \
+                 xargs -I {} find "{}" -type d -name basecalling | \
+                 xargs -d "\n" ls -dt 2>/dev/null | head -n 1)
+    if [ -n "$newest_dir" ]; then
+      cat "$newest_dir/pass/$barcode"/*.fastq.gz >> ~/marple/reads/pgt/"$sample".fastq.gz 2>/dev/null
+    else
+      echo "No basecalling directory found for experiment: $experiment"
+    fi
+  done
+}'
 marple_func='\nfunction marple() {\npushd ~/marple > /dev/null 2>&1\ncat .version.info \nbash marple.sh \npopd > /dev/null 2>&1\n}'
-transfer_pst_func='\nfunction transfer-pst() {\nexperiment=$1\nshift\nfor arg in "$@";do\nIFS="=" read -r barcode sample<<<"$arg"\nfind /var/lib/minknow/data/* -type d -name "$experiment" 2>/dev/null | xargs -I {} find '{}' -type d -name basecalling | while read dir; do\ncat $dir/pass/"$barcode"/*.fastq.gz > ~/marple/reads/pst/"$sample".fastq.gz\ndone\ndone\n}'
-transfer_pgt_func='\nfunction transfer-pgt() {\nexperiment=$1\nshift\nfor arg in "$@";do\nIFS="=" read -r barcode sample<<<"$arg"\nfind /var/lib/minknow/data/* -type d -name "$experiment" 2>/dev/null | xargs -I {} find '{}' -type d -name basecalling | while read dir; do\ncat $dir/pass/"$barcode"/*.fastq.gz > ~/marple/reads/pgt/"$sample".fastq.gz\ndone\ndone\n}'
 
 # MARPLE-GUI installation
 APP_NAME="MARPLE"
@@ -120,8 +155,10 @@ else
         /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
         brew install micromamba
         eval "$(micromamba shell hook --shell bash)"
+        micromamba activate
         micromamba install mamba -c conda-forge -y
     fi
+
     micromamba install mamba -c conda-forge -y
     mamba init
     mamba env create -f config/env.yml
