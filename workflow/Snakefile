@@ -140,7 +140,6 @@ for files, fout in zip(input_files, output_files):
         else:
             print("Skipping summarise_virs because input files do not exist.")
 
-
 rule primer_performance:
     input:
         pileup="results/{organism}/{sample}/aligned/{sample}.pileup.gz",
@@ -316,13 +315,11 @@ rule merge:
     input:
         existing_samples="resources/{organism}/{organism}_{existing_samples}.ffn.gz",
         new_samples=tree_input_files_to_merge
-    output: "results/{organism}/trees/{organism}_{existing_samples}.ffn",
+    output:
+        all_merged = "results/{organism}/trees/{organism}_{existing_samples}.ffn",
+        common_merged = "results/{organism}/trees/{organism}_{existing_samples}_common.ffn",
     log: "logs/{organism}/trees/merge_{existing_samples}.log",
-    shell:
-        """
-        (cat {input.new_samples} > {output}
-        gunzip -c {input.existing_samples} >> {output}) >{log}
-        """
+    script: "scripts/merge.py"
 
 rule tree:
     input: "results/{organism}/trees/{organism}_{existing_samples}.ffn"
