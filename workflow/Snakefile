@@ -44,16 +44,15 @@ rule create_sample_multiqc_row:
     script: "scripts/create_sample_multiqc_row.py"
 
 rule create_fung_vir_multiqc_row:
-# Change organism as above when Pst integration is ready to run for both
     input:
-        consensus="results/pgt/{sample}/aligned/{sample}.fna",
+        consensus="results/{organism}/{sample}/aligned/{sample}.fna",
         metadata="resources/fungicide_metadata.xlsx",
-        reference="resources/pgt/reference/pgt.fna",
+        reference="resources/{organism}/reference/{organism}.fna",
     output: 
-        multiqc_fung="results/pgt/{sample}/multiqc_row/{sample}_multiqc_fung_table.csv",
-        multiqc_rgene="results/pgt/{sample}/multiqc_row/{sample}_multiqc_rgene_table.csv",
-        multiqc_avr="results/pgt/{sample}/multiqc_row/{sample}_multiqc_avrgene_table.csv"
-    log: "logs/pgt/{sample}/create_fung_vir_multiqc_row_{sample}.log"
+        multiqc_fung="results/{organism}/{sample}/multiqc_row/{sample}_multiqc_fung_table.csv",
+        multiqc_rgene="results/{organism}/{sample}/multiqc_row/{sample}_multiqc_rgene_table.csv",
+        multiqc_avr="results/{organism}/{sample}/multiqc_row/{sample}_multiqc_avrgene_table.csv"
+    log: "logs/{organism}/{sample}/create_fung_vir_multiqc_row_{sample}.log"
     script: "scripts/virulence_fungicide_multiqc_row.py"
 
 rule summarise_primer_performance:
@@ -101,44 +100,51 @@ rule summarise_snps:
 
 types = ['fung', 'rgene', 'avrgene']
 
-def fung_virulence_files(wildcards):
-    files = [
-        f"results/pgt/{sample}/multiqc_row/{sample}_multiqc_{wildcards.types}_table.csv"
-        for sample in samples['pgt']
+def virulence_files(wildcards, kind):
+    organism = wildcards.organism
+    return [
+        f"results/{organism}/{sample}/multiqc_row/{sample}_multiqc_{kind}_table.csv"
+        for sample in samples.get(organism, [])
     ]
-    return files
+
+def fung_files(wildcards):
+    return virulence_files(wildcards, 'fung')
+
+def rgene_files(wildcards):
+    return virulence_files(wildcards, 'rgene')
+
+def avrgene_files(wildcards):
+    return virulence_files(wildcards, 'avrgene')
 
 rule summarise_virs:
     input:
-        fungin=expand("results/pgt/{sample}/multiqc_row/{sample}_multiqc_fung_table.csv", sample=samples['pgt']) if 'pgt' in samples else '',
-        srin=expand("results/pgt/{sample}/multiqc_row/{sample}_multiqc_rgene_table.csv", sample=samples['pgt']) if 'pgt' in samples else '',
-        avrin=expand("results/pgt/{sample}/multiqc_row/{sample}_multiqc_avrgene_table.csv", sample=samples['pgt']) if 'pgt' in samples else ''
+        fungin=fung_files,
+        srin=rgene_files,
+        avrin=avrgene_files
     output:
-        fungout="results/pgt/report/fung_summary.csv",
-        srout="results/pgt/report/rgene_summary.csv",
-        avrout="results/pgt/report/avr_summary.csv"
-    log: "logs/pgt/summarise_fungs.log"
+        fungout="results/{organism}/report/fung_summary.csv",
+        srout="results/{organism}/report/rgene_summary.csv",
+        avrout="results/{organism}/report/avr_summary.csv"
+    log: "logs/{organism}/summarise_fungs.log"
     run:
-        input_files = input.fungin + input.srin + input.avrin
-        if all(os.path.exists(f) for f in input_files):
-            shell("""
-            python -c "
-import re
-import pandas as pd
-input_files = ['{input.fungin}','{input.srin}','{input.avrin}']
-output_files = ['{output.fungout}','{output.srout}','{output.avrout}']
-for files, fout in zip(input_files, output_files):
-    file_list = re.sub('\\s+', ',', files).split(',')
-    df_list = [pd.read_csv(f) for f in file_list if len(open(f, 'r').readlines()) > 1]
-    if df_list:
-        df_final = pd.concat(df_list, axis=0, ignore_index=True, sort=False)
-        df_final.to_csv(fout, index=True, index_label='index')
-    if not df_list:
-        open(fout, 'x')
-            " 2> {log}
-            """)
-        else:
-            print("Skipping summarise_virs because input files do not exist.")
+        import os
+        import pandas as pd
+        def summarise(file_list, out_path):
+            dfs = []
+            for f in file_list:
+                if os.path.exists(f):
+                    # Skip empty (header-only) files
+                    with open(f, 'r') as fh:
+                        lines = fh.readlines()
+                    if len(lines) > 1:
+                        dfs.append(pd.read_csv(f))
+            if dfs:
+                pd.concat(dfs, axis=0, ignore_index=True, sort=False).to_csv(out_path, index=True, index_label='index')
+            else:
+                open(out_path, 'w').close()
+        summarise(input.fungin, output.fungout)
+        summarise(input.srin, output.srout)
+        summarise(input.avrin, output.avrout)
 
 rule primer_performance:
     input:
@@ -243,16 +249,15 @@ def multiqc_input(wildcards):
     files += [
         f"results/{organism}/report/snp_summary.csv"
     ]
-    if wildcards.organism == 'pgt':
-        files += [
-            "results/pgt/report/fung_summary.csv"
+    files += [
+        f"results/{organism}/report/fung_summary.csv"
+    ]
+    files += [
+        f"results/{organism}/report/rgene_summary.csv"
+    ]
+    files += [
+        f"results/{organism}/report/avr_summary.csv"
         ]
-        files += [
-            "results/pgt/report/rgene_summary.csv"
-        ]
-        files += [
-            "results/pgt/report/avr_summary.csv"
-            ]
     return files
 
 rule multiqc:

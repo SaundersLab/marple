@@ -5,8 +5,7 @@ import pandas as pd
 from Bio import SeqIO
 from Bio.Seq import Seq
 
-# snakemake_organism = snakemake.wildcards.organism
-snakemake_organism = 'pgt'
+snakemake_organism = snakemake.wildcards.organism
 
 def nt_to_aa(sequence):
     return str(Seq(sequence).translate())
@@ -20,6 +19,8 @@ def align_seqs(refseq, qseq, both=True):
         subprocess.run(["clustalw2", "-infile=" + temp_input.name, "-outfile=" + temp_output_name, "-output=fasta", "-type=Protein", '-quiet=stdout'], check=True)
     
     sequences = {record.id: str(record.seq) for record in SeqIO.parse(temp_output_name, 'fasta')}
+    os.remove(temp_input.name)
+    os.remove(temp_output_name)
     return (sequences['query'], sequences['ref']) if both else sequences['query']
 
 def load_data(file_path, sheet_name=None):
@@ -73,7 +74,7 @@ for gene, org in ref_sequences:
                             'Sample Name': str(snakemake.wildcards.sample), 'Gene': gene, 'Ref.Pst aa position': item['Ref.Pst aa position'], 
                             'WT amino acid': item['WT amino acid'], 'MUT amino acid': new_aa,
                             'Ref. Organism': org, 'Ref. aa position': item['Ref. aa position'], 
-                            f'Pgt amino acid position': unaligned_sample_pos, 'Reference': item['Reference'],
+                            f'{snakemake_organism.title()} amino acid position': unaligned_sample_pos, 'Reference': item['Reference'],
                             'Organism': snakemake_organism.title()
                         }
                         if new_row not in matching_rows:
@@ -114,7 +115,7 @@ pd.DataFrame(matching_rows).to_csv(snakemake.output.multiqc_fung, index=None)
 
 # Adding R-genes and Avr records to the multiqc report
 
-def out_vir(sequence):
+def out_vir(geneID, sequence):
     amb_count = sequence.count('N')
     pct_aligned = (len(sequence) - amb_count)*100 / len(sequence)
     print(pct_aligned)
@@ -128,12 +129,12 @@ sr_rows = []
 for geneID, sequence in sequences.items():
     if geneID.startswith('Avr'):
         print(geneID)
-        new_row = out_vir(sequence)
+        new_row = out_vir(geneID, sequence)
         if new_row:
             avr_rows.append(new_row)
     elif geneID.startswith('Sr'):
         print(geneID)
-        new_row = out_vir(sequence)
+        new_row = out_vir(geneID, sequence)
         if new_row:
             sr_rows.append(new_row)
 
