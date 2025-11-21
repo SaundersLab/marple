@@ -22,5 +22,5 @@ marple
 > The functions here, assume the reads are in `/var/lib/minknow/data/` and marple in `/home/$USER/`.
 
 Cite this work: \
-[1] https://doi.org/10.1186/s12864-025-11428-w \
-[2] https://doi.org/10.1186/s12915-019-0684-y 
+[1] [A portable, nanopore-based genotyping platform for near real-time detection of Puccinia graminis f. sp. tritici lineages and fungicide sensitivity](https://doi.org/10.1186/s12864-025-11428-w) \
+[2] [MARPLE, a point-of-care, strain-level disease diagnostics and surveillance tool for complex fungal pathogens](https://doi.org/10.1186/s12915-019-0684-y)
