@@ -21,7 +21,7 @@ def read_pileup_depths(
 
     for line in file(pileup_path):
         gene, pos, _, depth, *_ = line.split()
-        depths[gene][int(pos) - 1] = int(depth)
+        depths[gene][int(pos) - 1] = int(depth)       
 
     return depths
 
@@ -41,6 +41,12 @@ def primer_performance(
     primers = pd.read_csv(primers_path)
 
     gene_lengths = primers.groupby('gene').gene_length.first().to_dict()
+
+    # For Cob_I, Cob_II, Cob_III, combine depths as it's the same gene in three parts
+    if 'Cob_I' in gene_lengths:
+        gene_lengths['Cob'] = sum(gene_lengths.pop(g) for g in ['Cob_I', 'Cob_II', 'Cob_III'])
+        
+    
     depths = read_pileup_depths(pileup_path, gene_lengths)
 
     gene_thresholds = {}

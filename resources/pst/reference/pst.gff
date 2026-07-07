@@ -1,3 +1,7 @@
+Cob	.	gene	1	1146	.	+	.	ID=Cob;Name=Cob
+Cob	.	mRNA	1	1146	.	+	.	ID=Cob.mRNA;Parent=Cob
+Cob	.	exon	1	1146	.	+	.	ID=Cob.exon1;Parent=Cob.mRNA
+Cob	.	CDS	1	1146	.	+	0	ID=Cob.CDS1;Parent=Cob.mRNA
 SdhB	.	gene	1	1232	.	-	.	ID=SdhB;Name=SdhB
 SdhB	.	mRNA	1	1232	.	-	.	ID=SdhB.mRNA;Parent=SdhB
 SdhB	.	exon	1164	1232	.	-	.	ID=SdhB.exon1;Parent=SdhB.mRNA

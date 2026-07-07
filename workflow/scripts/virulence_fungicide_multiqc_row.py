@@ -7,8 +7,11 @@ from Bio.Seq import Seq
 
 snakemake_organism = snakemake.wildcards.organism
 
-def nt_to_aa(sequence):
-    return str(Seq(sequence).translate())
+def nt_to_aa(sequence,mtDNA=False):
+    if mtDNA:
+        return str(Seq(sequence).translate(table=4))
+    else:
+        return str(Seq(sequence).translate())
 
 def align_seqs(refseq, qseq, both=True):
     with tempfile.NamedTemporaryFile(mode="w+", delete=False) as temp_input:
@@ -138,8 +141,11 @@ for gene, org in ref_sequences:
     aa_refseq = ref_sequences[(gene, org)]
     if gene not in sequences:
         continue
-
-    aa_seq = nt_to_aa(sequences[gene])
+    
+    if gene == "Cob":
+        aa_seq = nt_to_aa(sequences[gene],mtDNA=True)
+    else:
+        aa_seq = nt_to_aa(sequences[gene])
     if all(aa == "X" for aa in aa_seq):
         add_row(
             matching_rows,
@@ -183,13 +189,16 @@ for gene, org in ref_sequences:
                     "Sample amino acid position": unaligned_sample_pos,
                     "Reference": item["Reference"],
                     "Organism": str(snakemake.wildcards.organism).title(),
-                    "Representatives with mutation": "; ".join(reps_with_mut) if len(reps_with_mut) < total_reps else "All representatives",
+                    "Representatives with mutation": "All representatives" if total_reps > 0 and len(reps_with_mut) == total_reps else "; ".join(reps_with_mut),
                 },
                 seen_rows,
             )
 
     ref_seq = get_ref_seq(gene)
-    aa_ref_seq = nt_to_aa(ref_seq)
+    if gene == "Cob":
+        aa_ref_seq = nt_to_aa(ref_seq, mtDNA=True)
+    else:
+        aa_ref_seq = nt_to_aa(ref_seq)
     aligned_aa_seq, aligned_ref_aa_seq = align_seqs(aa_ref_seq, aa_seq)
     ref_alignment_map = alignment_mapping(aligned_ref_aa_seq)
     sample_alignment_map = alignment_mapping(aligned_aa_seq)
@@ -227,7 +236,7 @@ for gene, org in ref_sequences:
                 "Sample amino acid position": unaligned_pos,
                 "Reference": "N/A",
                 "Organism": str(snakemake.wildcards.organism).title(),
-                "Representatives with mutation": "; ".join(reps_with_mut) if len(reps_with_mut) < total_reps else "All representatives",
+                "Representatives with mutation": "All representatives" if total_reps > 0 and len(reps_with_mut) == total_reps else "; ".join(reps_with_mut),
             },
             seen_rows,
         )
