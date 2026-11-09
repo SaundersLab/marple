@@ -1,9 +1,20 @@
 ![marple-diagnostics logo](https://marple-diagnostics.org/wp-content/uploads/2022/07/MARPLE-logo-1024x364.png)
 
-To install the dependencies and create the environment:
+MARPLE must be in `~/marple`, or the install script will stop. Clone it there:
+```
+git clone https://github.com/SaundersLab/marple.git ~/marple
+cd ~/marple
+```
+> A downloaded zip extracts to `marple-main`. Rename the folder to `marple` and move it to your home directory.
+
+The install script needs `curl` and `mamba`, and tells you how to install them if they are missing. `mamba` comes with [Miniforge](https://github.com/conda-forge/miniforge#install).
+
+To install the remaining dependencies and create the environment, run this from `~/marple`:
 ```
 . marple-install.sh
 ```
+The script prints a success message when everything is installed, or a list of what is missing.
+
 > This script also adds the functions to run the pipeline in `.bashrc`.
 
 To concatenate and transfer the fastq files created in MinKnow for pgt or pst:
