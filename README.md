@@ -15,6 +15,10 @@ To run MARPLE:
 ```
 marple
 ```
+The pipeline keeps running if the terminal closes, but it pauses if the computer goes to sleep. To check on a run from any terminal:
+```
+cat ~/marple/results/pipeline_status.txt
+```
 
 > These functions can be executed from anywhere in the system.
 
