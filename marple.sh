@@ -1,5 +1,5 @@
 #!/bin/bash
-# last update: 12/09/2024
+# last update: 09/11/2026
 
 run_cmd="snakemake --cores all --rerun-incomplete"
 log_file="snakemake.log"
@@ -19,12 +19,17 @@ if command -v mamba &> /dev/null; then
         done
         wait $pid
         status=$?
+        printf "\r \r"
         if [ $status -ne 0 ]; then
             echo "Command failed with exit status $status. Error log:"
             cat $log_file
             exit 1
         fi
-        
+
+        echo "Pipeline completed successfully. Results can be found in $PWD/results"
+        for report in results/*/report/*.multiqc.html; do
+            [ -e "$report" ] && echo "  Report: $PWD/$report"
+        done
         exit 0
     else
         echo "Conda environment marple-env not found."
